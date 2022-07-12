@@ -7,7 +7,14 @@ import (
 
 func CheckErr(err error) {
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalln(err)
+	}
+}
+
+func CheckQueryErr(err error) {
+	if err != nil {
+		log.Println(err)
+		return
 	}
 }
 

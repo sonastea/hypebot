@@ -9,5 +9,5 @@ func main() {
 	b, err := hypebot.NewHypeBot()
 	utils.CheckErr(err)
 
-    b.Run()
+	b.Run()
 }
