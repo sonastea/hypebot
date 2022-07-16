@@ -25,3 +25,6 @@ go.work
 
 #Database files
 *.db
+
+#Songs folders
+/songs

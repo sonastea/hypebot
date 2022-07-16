@@ -11,6 +11,13 @@ const create string = `
     CREATE TABLE IF NOT EXISTS User (
     id INTEGER NOT NULL PRIMARY KEY,
     UID STRING NOT NULL UNIQUE
+    );
+
+    CREATE TABLE IF NOT EXISTS Themesong (
+	id       INTEGER NOT NULL PRIMARY KEY,
+	User_ID  STRING NOT NULL UNIQUE,
+	Filepath STRING,
+    FOREIGN KEY (User_ID) REFERENCES User(UID)
     );`
 
 func NewDBConn() (db *sql.DB, err error) {

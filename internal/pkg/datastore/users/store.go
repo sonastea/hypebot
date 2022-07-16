@@ -7,15 +7,34 @@ import (
 	"github.com/sonastea/hypebot/internal/utils"
 )
 
-func AddUser(db *sql.DB, user User) {
-	stmt, err := db.Prepare("INSERT OR IGNORE INTO User (id, UID) VALUES (?, ?)")
-	utils.CheckQueryErr(err)
+func FindUser(db *sql.DB, user_id string) (bool, error) {
+	stmt, err := db.Prepare("SELECT UID from User Where User.UID = ?;")
+	utils.CheckErr(err)
 
-	res, err := stmt.Exec(nil, user.UID)
-	utils.CheckQueryErr(err)
+	res, err := stmt.Exec(user_id)
+	utils.CheckErr(err)
 
 	rows, err := res.RowsAffected()
-	utils.CheckQueryErr(err)
+	utils.CheckErr(err)
+
+	defer stmt.Close()
+
+	if rows > 0 {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+func AddUser(db *sql.DB, user User) {
+	stmt, err := db.Prepare("INSERT OR IGNORE INTO User (id, UID) VALUES (?, ?)")
+	utils.CheckErr(err)
+
+	res, err := stmt.Exec(nil, user.UID)
+	utils.CheckErr(err)
+
+	rows, err := res.RowsAffected()
+	utils.CheckErr(err)
 
 	defer stmt.Close()
 

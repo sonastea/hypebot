@@ -5,16 +5,15 @@ import (
 	"log"
 )
 
-func CheckErr(err error) {
+func CheckErrFatal(err error) {
 	if err != nil {
 		log.Fatalln(err)
 	}
 }
 
-func CheckQueryErr(err error) {
+func CheckErr(err error) {
 	if err != nil {
 		log.Println(err)
-		return
 	}
 }
 
