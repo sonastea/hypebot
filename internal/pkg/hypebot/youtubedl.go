@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"strings"
 	"sync"
 	"time"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/jonas747/dca"
 	"github.com/kkdai/youtube/v2"
 	"github.com/sonastea/hypebot/internal/pkg/datastore/themesongs"
+	"github.com/sonastea/hypebot/internal/pkg/datastore/users"
 	"github.com/sonastea/hypebot/internal/utils"
 )
 
@@ -29,54 +29,30 @@ func NewYoutubeDL() *YoutubeDL {
 	}
 }
 
-func (hb *HypeBot) handleSetThemesong(s *discordgo.Session, i *discordgo.InteractionCreate) string {
-	var (
-		videoID   string
-		startTime float64
-		duration  float64 = 5.0
-	)
-
-	optionMap := make(map[string]*discordgo.ApplicationCommandInteractionDataOption)
-
-	if opt, ok := optionMap["url"]; ok {
-		url := opt.StringValue()
-		validURL := strings.Contains(url, "youtube.com/watch?v=")
-		if !validURL {
-			return "Please provide a valid youtube url from the search bar"
-		}
-		videoID = strings.Split(url, "=")[1]
-	} else {
-		return "Please provide a valid youtube url from the search bar"
+func (hb *HypeBot) setThemesong(file_path string, user_id string) string {
+	if filePath, ok := users.GetThemesong(hb.db, user_id); ok {
+		// Delete old themesong
+		del := exec.Command("rm", filePath)
+		del.Run()
+		return themesongs.UpdateThemesong(hb.db, file_path, user_id)
 	}
 
-	if opt, ok := optionMap["start_time"]; ok {
-		startTime = opt.FloatValue()
-	} else {
-		return "Please provide a starting time in seconds"
-	}
-
-	if opt, ok := optionMap["duration"]; ok {
-		duration = opt.FloatValue()
-	}
-
-	filename, err := hb.downloadVideo(videoID, startTime, duration)
-	utils.CheckErr(err)
-	filename += ".dca"
-
-	go themesongs.SetThemesong(hb.db, i.User.ID, filename)
-
-	return "Themesong set successfully"
+	return themesongs.SetThemesong(hb.db, file_path, user_id)
 }
 
-func (hb *HypeBot) playThemesong(guildID string, channelID string, vc *discordgo.VoiceConnection) (err error) {
+func (hb *HypeBot) removeThemesong(user_id string) string {
+	return themesongs.RemoveThemesong(hb.db, user_id)
+}
+
+func (hb *HypeBot) playThemesong(file_path string, guild_id string, channel_id string, vc *discordgo.VoiceConnection) (err error) {
 	if vc == nil {
-		vc, err = hb.s.ChannelVoiceJoin(guildID, channelID, false, true)
+		vc, err = hb.s.ChannelVoiceJoin(guild_id, channel_id, false, true)
 	}
 	if err != nil {
 		return err
 	}
 
-	file, err := os.Open("./songs/4b1191c2-aca0-4e2e-b49e-cf5a010454f8.dca")
+	file, err := os.Open(file_path)
 	utils.CheckErr(err)
 	defer file.Close()
 
@@ -106,13 +82,13 @@ func (hb *HypeBot) playThemesong(guildID string, channelID string, vc *discordgo
 	return nil
 }
 
-func (hb *HypeBot) downloadVideo(videoID string, startTime float64, duration float64) (string, error) {
+func (hb *HypeBot) downloadVideo(url string, start_time string, duration string) (file_path string, err error) {
 	y := NewYoutubeDL()
 	y.mu.Lock()
 	defer y.mu.Unlock()
 
 	// Get video from youtube
-	video, err := y.c.GetVideo(videoID)
+	video, err := y.c.GetVideo(url)
 	utils.CheckErr(err)
 
 	formats := video.Formats.WithAudioChannels() // only get videos with audio
@@ -142,7 +118,7 @@ func (hb *HypeBot) downloadVideo(videoID string, startTime float64, duration flo
 
 	// Convert mp4 to mp3
 	fmt.Println("Converting " + fileName + ".mp4 to " + fileName + ".mp3")
-	con := exec.Command("ffmpeg", "-ss", "60", "-t", "15", "-i", videoFile.Name(), mp3File)
+	con := exec.Command("ffmpeg", "-ss", start_time, "-t", duration, "-i", videoFile.Name(), mp3File)
 	if con.Run() != nil {
 		utils.CheckErr(err)
 	}
@@ -167,5 +143,5 @@ func (hb *HypeBot) downloadVideo(videoID string, startTime float64, duration flo
 	}
 
 	fmt.Printf("Created theme song: %v - %v \n\n", video.Title, fileName)
-	return fileName, nil
+	return fmt.Sprintf("./songs/%v.dca", fileName), nil
 }

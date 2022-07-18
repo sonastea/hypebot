@@ -1,15 +1,25 @@
 package hypebot
 
 import (
+	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
 )
 
-var msg string
+var (
+	msg                  string
+	available_messages   string = "Available HypeBot commands are ```hypebot <set | remove>```"
+	not_enough_arguments string = "Invalid command, use```hypebot set <youtube_url | video_id> start_time (duration: min: 1s, max: 15s)```"
+)
 
-func handleMessage(s *discordgo.Session, m *discordgo.Message) {
-	args := strings.Split(m.Content, " ")
+func (hb *HypeBot) handleMessage(s *discordgo.Session, m *discordgo.Message) {
+	// Clean message contents of excess whitespace before splitting
+	str := strings.Join(strings.Fields(m.Content), " ")
+	args := strings.Split(str, " ")
+
 	// check for hypebot prefix for commands
 	if args[0] != "hypebot" {
 		return
@@ -17,7 +27,6 @@ func handleMessage(s *discordgo.Session, m *discordgo.Message) {
 
 	// check if supplied arguments after hypebot prefix are valid
 	if len(args) < 2 {
-		msg = "Available HypeBot commands are ```hypebot <set | remove>```"
 		s.ChannelMessageSend(m.ChannelID, msg)
 		return
 	}
@@ -25,12 +34,47 @@ func handleMessage(s *discordgo.Session, m *discordgo.Message) {
 	// run available commands accorrding to the supplied arguments
 	switch args[1] {
 	case "set":
-		msg = "set"
+		if len(args) < 4 {
+			s.ChannelMessageSend(m.ChannelID, not_enough_arguments)
+			return
+		}
+
+		url, start, duration, err := sanitizeSetMessage(args[2:])
+		if err != nil {
+			s.ChannelMessageSend(m.ChannelID, err.Error())
+		}
+
+		filePath, err := hb.downloadVideo(*url, start, duration)
+		if err != nil {
+			s.ChannelMessageSend(m.ChannelID, err.Error())
+		}
+
+		msg = hb.setThemesong(filePath, m.Author.ID)
+
 	case "remove":
-		msg = "removed"
+		msg = hb.removeThemesong(m.Author.ID)
+
 	default:
-		msg = "Invalid command or arguments. Check spacing"
+		msg = "Invalid command or arguments"
 	}
 
 	s.ChannelMessageSend(m.ChannelID, msg)
+}
+
+func sanitizeSetMessage(args []string) (*string, string, string, error) {
+	validUrl, _ := regexp.MatchString(`(?:https?:\/\/)?(?:www\.)?youtu\.?be(?:\.com)?\/?.*(?:watch|embed)?(?:.*v=|v\/|\/)([\w\-_]+)\&?`, args[0])
+	if !validUrl {
+		return nil, "", "", fmt.Errorf("Invalid youtube url")
+	}
+
+	_, err := strconv.ParseFloat(args[1], 64)
+	if err != nil {
+		return nil, "", "", fmt.Errorf("Invalid start time, use a number in seconds")
+	}
+
+	if len(args) < 3 {
+		return &args[0], args[1], "5", nil
+	}
+
+	return &args[0], args[1], args[2], nil
 }

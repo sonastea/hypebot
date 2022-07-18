@@ -27,7 +27,7 @@ func FindUser(db *sql.DB, user_id string) (bool, error) {
 }
 
 func AddUser(db *sql.DB, user User) {
-	stmt, err := db.Prepare("INSERT OR IGNORE INTO User (id, UID) VALUES (?, ?)")
+	stmt, err := db.Prepare("INSERT OR IGNORE INTO User (id, UID) VALUES (?, ?);")
 	utils.CheckErr(err)
 
 	res, err := stmt.Exec(nil, user.UID)
@@ -42,4 +42,20 @@ func AddUser(db *sql.DB, user User) {
 	if rows > 0 {
 		fmt.Printf("Added %v \n", user.UID)
 	}
+}
+
+func GetThemesong(db *sql.DB, user_id string) (filePath string, ok bool) {
+	res, err := db.Query("SELECT Filepath from Themesong Where Themesong.user_id = ?;", user_id)
+	utils.CheckErr(err)
+	defer res.Close()
+
+	var filepath string
+
+	for res.Next() {
+		err = res.Scan(&filepath)
+		utils.CheckErr(err)
+		return filepath, true
+	}
+
+	return "", false
 }

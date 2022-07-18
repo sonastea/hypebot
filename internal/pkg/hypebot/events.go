@@ -29,7 +29,17 @@ func (hb *HypeBot) listenVoiceStateUpdate(s *discordgo.Session, e *discordgo.Voi
 			users.AddUser(hb.db, newUser)
 		}
 
+		if filePath, ok := users.GetThemesong(hb.db, e.VoiceState.UserID); ok {
+			vc, err := hb.s.ChannelVoiceJoin(GuildID, e.ChannelID, false, false)
+			if err != nil {
+				log.Println(err)
+			}
 
+			err = hb.playThemesong(filePath, GuildID, e.ChannelID, vc)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
 	}
 }
 
@@ -44,5 +54,5 @@ func (hb *HypeBot) listenMessageCreate(s *discordgo.Session, m *discordgo.Messag
 		return
 	}
 
-	go handleMessage(s, m.Message)
+	go hb.handleMessage(s, m.Message)
 }
