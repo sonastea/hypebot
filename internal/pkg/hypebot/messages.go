@@ -12,7 +12,7 @@ import (
 var (
 	msg                  string
 	available_messages   string = "Available HypeBot commands are ```hypebot <set | remove>```"
-	not_enough_arguments string = "Invalid command, use```hypebot set <youtube_url | video_id> start_time (duration: min: 1s, max: 15s)```"
+	not_enough_arguments string = "Invalid command, use ```hypebot set <youtube_url | video_id> start_time (duration: min: 1s, max: 15s)```"
 )
 
 func (hb *HypeBot) handleMessage(s *discordgo.Session, m *discordgo.Message) {
@@ -27,7 +27,7 @@ func (hb *HypeBot) handleMessage(s *discordgo.Session, m *discordgo.Message) {
 
 	// check if supplied arguments after hypebot prefix are valid
 	if len(args) < 2 {
-		s.ChannelMessageSend(m.ChannelID, msg)
+		s.ChannelMessageSendReply(m.ChannelID, msg, m.Reference())
 		return
 	}
 
@@ -35,18 +35,18 @@ func (hb *HypeBot) handleMessage(s *discordgo.Session, m *discordgo.Message) {
 	switch args[1] {
 	case "set":
 		if len(args) < 4 {
-			s.ChannelMessageSend(m.ChannelID, not_enough_arguments)
+			s.ChannelMessageSendReply(m.ChannelID, not_enough_arguments, m.Reference())
 			return
 		}
 
 		url, start, duration, err := sanitizeSetMessage(args[2:])
 		if err != nil {
-			s.ChannelMessageSend(m.ChannelID, err.Error())
+			s.ChannelMessageSendReply(m.ChannelID, err.Error(), m.Reference())
 		}
 
 		filePath, err := hb.downloadVideo(*url, start, duration)
 		if err != nil {
-			s.ChannelMessageSend(m.ChannelID, err.Error())
+			s.ChannelMessageSendReply(m.ChannelID, err.Error(), m.Reference())
 		}
 
 		msg = hb.setThemesong(filePath, m.Author.ID)
@@ -58,7 +58,7 @@ func (hb *HypeBot) handleMessage(s *discordgo.Session, m *discordgo.Message) {
 		msg = "Invalid command or arguments"
 	}
 
-	s.ChannelMessageSend(m.ChannelID, msg)
+	s.ChannelMessageSendReply(m.ChannelID, msg, m.Reference())
 }
 
 func sanitizeSetMessage(args []string) (*string, string, string, error) {

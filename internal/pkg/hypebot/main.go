@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"syscall"
 
 	"github.com/bwmarrin/discordgo"
 
@@ -66,7 +67,7 @@ func (hb *HypeBot) Run() {
 
 	fmt.Printf("HypeBot #%v is now running. Press CTRL-C to exit.\n\n", hb.s.State.User.Discriminator)
 	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-stop
 }
 
