@@ -65,7 +65,7 @@ func (hb *HypeBot) Run() {
 	hb.s.AddHandler(hb.listenVoiceStateUpdate)
 	hb.s.AddHandler(hb.listenMessageCreate)
 
-	fmt.Printf("HypeBot #%v is now running. Press CTRL-C to exit.\n\n", hb.s.State.User.Discriminator)
+	fmt.Printf("HypeBot #%v is now running. Press CTRL-C to exit.\n", hb.s.State.User.Discriminator)
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-stop

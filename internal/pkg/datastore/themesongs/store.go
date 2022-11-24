@@ -23,7 +23,7 @@ func SetThemesong(db *sql.DB, file_path string, user_id string) (message string)
 
 	// Check if themesong was added to the database
 	if rows > 0 {
-		message := fmt.Sprintf("Added themesong")
+		message := fmt.Sprintf("Added themesong ✅")
 		fmt.Println(message)
 		return message
 	}
@@ -45,7 +45,7 @@ func UpdateThemesong(db *sql.DB, file_path string, user_id string) (message stri
 	defer stmt.Close()
 
 	if rows > 0 {
-		message := fmt.Sprintf("Updated themesong")
+		message := fmt.Sprintf("Updated themesong ✅")
 		fmt.Println(message)
 		return message
 	}
@@ -68,7 +68,7 @@ func RemoveThemesong(db *sql.DB, user_id string) (message string) {
 
 	// Check if themesong was updated true
 	if rows > 0 {
-		message := fmt.Sprintf("Removed themesong")
+		message := fmt.Sprintf("Removed themesong ❌")
 		fmt.Println(message)
 		return message
 	}

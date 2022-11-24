@@ -1,9 +1,11 @@
 package hypebot
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"sync"
@@ -12,21 +14,16 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/google/uuid"
 	"github.com/jonas747/dca"
-	"github.com/kkdai/youtube/v2"
 	"github.com/sonastea/hypebot/internal/pkg/datastore/themesongs"
 	"github.com/sonastea/hypebot/internal/pkg/datastore/users"
 	"github.com/sonastea/hypebot/internal/utils"
 )
 
-type YoutubeDL struct {
-	mu sync.Mutex
-	c  *youtube.Client
-}
-
-func NewYoutubeDL() *YoutubeDL {
-	return &YoutubeDL{
-		c: &youtube.Client{},
-	}
+type VideoMetaData struct {
+	ID          string `json:"id"`
+	Title       string `json:"title"`
+	OriginalURL string `json:"original_url"`
+	UploadDate  string `json:"upload_date"`
 }
 
 func (hb *HypeBot) setThemesong(file_path string, user_id string) string {
@@ -83,65 +80,73 @@ func (hb *HypeBot) playThemesong(file_path string, guild_id string, channel_id s
 }
 
 func (hb *HypeBot) downloadVideo(url string, start_time string, duration string) (file_path string, err error) {
-	y := NewYoutubeDL()
-	y.mu.Lock()
-	defer y.mu.Unlock()
+	var mu sync.Mutex
+	mu.Lock()
+	defer mu.Unlock()
+	var filePath string
 
-	// Get video from youtube
-	video, err := y.c.GetVideo(url)
-	utils.CheckErr(err)
+	ytdl, err := exec.LookPath("yt-dlp")
+	if err != nil {
+		utils.CheckErrFatal(err)
+	} else {
+		dir, err := os.Getwd()
+		if err != nil {
+			return "", err
+		}
 
-	formats := video.Formats.WithAudioChannels() // only get videos with audio
-	stream, _, err := y.c.GetStream(video, &formats[0])
-	utils.CheckErr(err)
+		// Create songs directory if it doesn't exist
+		songsDir := dir + "/songs/"
+		if _, err := os.Stat(songsDir); errors.Is(err, os.ErrNotExist) {
+			err := os.Mkdir(songsDir, os.ModePerm)
+			return "", err
+		}
+		fileName := uuid.New().String()
+		opusFile := songsDir + fileName + ".opus"
+		filePath = fmt.Sprintf("./songs/%s.dca", fileName)
 
-	dir, err := os.Getwd()
-	utils.CheckErr(err)
+		args := []string{
+			url,
+			"--extract-audio",
+			"--ignore-errors",
+			"--audio-format", "opus",
+			"--max-downloads", "1",
+			"--no-playlist",
+			"--no-color",
+			"--no-check-formats",
+			"--print-json",
+			"--quiet",
+			"--output", fmt.Sprintf("%s", opusFile),
+			"--downloader", "ffmpeg",
+			"--downloader-args", fmt.Sprintf("ffmpeg:-ss %s -t %s -b:a 96k", start_time, duration),
+		}
 
-	// Create songs directory if it doesn't exist
-	songsDir := dir + "/songs/"
-	if _, err := os.Stat(songsDir); errors.Is(err, os.ErrNotExist) {
-		err := os.Mkdir(songsDir, os.ModePerm)
-		utils.CheckErr(err)
+		cmd := exec.Command(ytdl, args...)
+		if data, err := cmd.Output(); err != nil && err.Error() != "exit status 101" {
+			log.Printf("{yt-dlp} %v\n", err)
+		} else {
+			videoMetaData := VideoMetaData{}
+			err = json.Unmarshal(data, &videoMetaData)
+			if err != nil {
+				return "", err
+			}
+
+			// Convert opus to dca so we can send to discord voice
+			fmt.Println("Converting " + fileName + ".mp3 to " + fileName + ".dca")
+			encodeSession, _ := dca.EncodeFile(opusFile, dca.StdEncodeOptions)
+			defer encodeSession.Cleanup()
+
+			dcaFile, err := os.Create(songsDir + fileName + ".dca")
+			utils.CheckErr(err)
+			io.Copy(dcaFile, encodeSession)
+
+			del := exec.Command("rm", opusFile)
+			if del.Run() != nil {
+				utils.CheckErr(err)
+			}
+
+			fmt.Printf("Created theme song: %v - %v \n", videoMetaData.Title, fileName)
+		}
 	}
 
-	// Files we convert from mp4 -> mp3 -> dca
-	fileName := uuid.New().String()
-	mp3File := songsDir + fileName + ".mp3"
-	videoFile, err := os.Create(songsDir + fileName + ".mp4")
-	utils.CheckErr(err)
-	defer videoFile.Close()
-
-	// Copy content from youtube stream to mp4 file
-	_, err = io.Copy(videoFile, stream)
-	utils.CheckErr(err)
-
-	// Convert mp4 to mp3
-	fmt.Println("Converting " + fileName + ".mp4 to " + fileName + ".mp3")
-	con := exec.Command("ffmpeg", "-ss", start_time, "-t", duration, "-i", videoFile.Name(), mp3File)
-	if con.Run() != nil {
-		utils.CheckErr(err)
-	}
-
-	// Convert mp3 to dca so we can send to discord voice
-	fmt.Println("Converting " + fileName + ".mp3 to " + fileName + ".dca")
-	encodeSession, _ := dca.EncodeFile(mp3File, dca.StdEncodeOptions)
-	defer encodeSession.Cleanup()
-	dcaFile, err := os.Create(songsDir + fileName + ".dca")
-	utils.CheckErr(err)
-	io.Copy(dcaFile, encodeSession)
-
-	// Delete mp3 and mp3 files after we're done
-	del := exec.Command("rm", videoFile.Name())
-	if del.Run() != nil {
-		utils.CheckErr(err)
-	}
-
-	del2 := exec.Command("rm", mp3File)
-	if del2.Run() != nil {
-		utils.CheckErr(err)
-	}
-
-	fmt.Printf("Created theme song: %v - %v \n\n", video.Title, fileName)
-	return fmt.Sprintf("./songs/%v.dca", fileName), nil
+	return filePath, nil
 }

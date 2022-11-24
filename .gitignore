@@ -6,6 +6,7 @@
 *.dylib
 hypebot
 !hypebot/
+yt-dlp
 
 # Test binary, built with `go test -c`
 *.test
