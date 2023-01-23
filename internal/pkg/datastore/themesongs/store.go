@@ -73,6 +73,6 @@ func RemoveThemesong(db *sql.DB, user_id string) (message string) {
 		return message
 	}
 
-	message = "Error removing themesong"
+	message = "Error removing themesong ⚠️"
 	return message
 }

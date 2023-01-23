@@ -27,10 +27,10 @@ func FindUser(db *sql.DB, user_id string) (bool, error) {
 }
 
 func AddUser(db *sql.DB, user User) {
-	stmt, err := db.Prepare("INSERT OR IGNORE INTO User (id, UID) VALUES (?, ?);")
+	stmt, err := db.Prepare("INSERT OR IGNORE INTO User (UID) VALUES (?);")
 	utils.CheckErr(err)
 
-	res, err := stmt.Exec(nil, user.UID)
+	res, err := stmt.Exec(user.UID)
 	utils.CheckErr(err)
 
 	rows, err := res.RowsAffected()
