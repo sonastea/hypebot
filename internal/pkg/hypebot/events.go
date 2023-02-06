@@ -42,17 +42,3 @@ func (hb *HypeBot) listenVoiceStateUpdate(s *discordgo.Session, e *discordgo.Voi
 		}
 	}
 }
-
-func (hb *HypeBot) listenMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
-	// If message is from a bot or HypeBot, ignore it
-	if m.Author.ID == s.State.User.ID || m.Author.Bot {
-		return
-	}
-
-	// If message is not in a particular channel, ignore it
-	if m.ChannelID != "997632001307856967" {
-		return
-	}
-
-	go hb.handleMessage(s, m.Message)
-}

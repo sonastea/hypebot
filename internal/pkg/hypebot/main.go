@@ -51,6 +51,7 @@ func NewHypeBot() (hb *HypeBot, err error) {
 func (hb *HypeBot) handleCommands() {
 	commandHandlers := map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
 		"clear": hb.clearCommand,
+        "set": hb.setCommand,
 	}
 
 	hb.s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -86,7 +87,6 @@ func (hb *HypeBot) Run() {
 	hb.s.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsGuilds)
 
 	hb.s.AddHandler(hb.listenVoiceStateUpdate)
-	hb.s.AddHandler(hb.listenMessageCreate)
 
 	hb.handleCommands()
 
