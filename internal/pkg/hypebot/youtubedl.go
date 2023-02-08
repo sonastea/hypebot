@@ -26,19 +26,19 @@ type VideoMetaData struct {
 	UploadDate  string `json:"upload_date"`
 }
 
-func (hb *HypeBot) setThemesong(file_path string, user_id string) string {
-	if filePath, ok := users.GetThemesong(hb.db, user_id); ok {
+func (hb *HypeBot) setThemesong(file_path string, guild_id string, user_id string) string {
+	if filePath, ok := users.GetThemesong(hb.db, guild_id, user_id); ok {
 		// Delete old themesong
 		del := exec.Command("rm", filePath)
 		del.Run()
-		return themesongs.UpdateThemesong(hb.db, file_path, user_id)
+		return themesongs.UpdateThemesong(hb.db, file_path, guild_id, user_id)
 	}
 
-	return themesongs.SetThemesong(hb.db, file_path, user_id)
+	return themesongs.SetThemesong(hb.db, file_path, guild_id, user_id)
 }
 
-func (hb *HypeBot) removeThemesong(user_id string) string {
-	return themesongs.RemoveThemesong(hb.db, user_id)
+func (hb *HypeBot) removeThemesong(guild_id string, user_id string) string {
+	return themesongs.RemoveThemesong(hb.db, guild_id, user_id)
 }
 
 func (hb *HypeBot) playThemesong(file_path string, guild_id string, channel_id string, vc *discordgo.VoiceConnection) (err error) {
@@ -131,7 +131,7 @@ func (hb *HypeBot) downloadVideo(url string, start_time string, duration string)
 			}
 
 			// Convert opus to dca so we can send to discord voice
-			fmt.Println("Converting " + fileName + ".mp3 to " + fileName + ".dca")
+			log.Println("Converting " + fileName + ".mp3 to " + fileName + ".dca")
 			encodeSession, _ := dca.EncodeFile(opusFile, dca.StdEncodeOptions)
 			defer encodeSession.Cleanup()
 
@@ -144,7 +144,7 @@ func (hb *HypeBot) downloadVideo(url string, start_time string, duration string)
 				utils.CheckErr(err)
 			}
 
-			fmt.Printf("Created theme song: %v - %v \n", videoMetaData.Title, fileName)
+			log.Printf("Created theme song: %v - %v \n", videoMetaData.Title, fileName)
 		}
 	}
 

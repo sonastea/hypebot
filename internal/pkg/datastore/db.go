@@ -8,16 +8,32 @@ import (
 )
 
 const create string = `
+    CREATE TABLE IF NOT EXISTS Guild (
+    "id" INTEGER,
+    "UID" TEXT NOT NULL UNIQUE,
+    "active" INTEGER DEFAULT 1,
+    "createdAt"	TEXT DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt"	TEXT DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "Guild_PK" PRIMARY KEY("id" AUTOINCREMENT)
+    );
+
     CREATE TABLE IF NOT EXISTS User (
-    id INTEGER NOT NULL PRIMARY KEY,
-    UID STRING NOT NULL UNIQUE
+    "id" INTEGER NOT NULL,
+    "UID" TEXT NOT NULL,
+    "guild_id" TEXT NOT NULL,
+    "createdAt"	TEXT DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt"	TEXT DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "User_PK" PRIMARY KEY("id" AUTOINCREMENT)
     );
 
     CREATE TABLE IF NOT EXISTS Themesong (
-	id       INTEGER NOT NULL PRIMARY KEY,
-	User_ID  STRING NOT NULL UNIQUE,
-	Filepath STRING,
-    FOREIGN KEY (User_ID) REFERENCES User(UID)
+    "id"       INTEGER NOT NULL,
+    "guild_id" TEXT NOT NULL,
+    "user_id"  TEXT NOT NULL,
+    "Filepath" TEXT,
+    CONSTRAINT "Guild_PK" PRIMARY KEY("id" AUTOINCREMENT)
+    FOREIGN KEY ("Guild_ID") REFERENCES Guild(UID)
+    FOREIGN KEY ("User_ID") REFERENCES User(UID)
     );`
 
 func NewDBConn() (db *sql.DB, err error) {

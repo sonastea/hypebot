@@ -2,35 +2,26 @@ package users
 
 import (
 	"database/sql"
-	"fmt"
+	"log"
 
 	"github.com/sonastea/hypebot/internal/utils"
 )
 
-func FindUser(db *sql.DB, user_id string) (bool, error) {
-	stmt, err := db.Prepare("SELECT UID from User Where User.UID = ?;")
-	utils.CheckErr(err)
-
-	res, err := stmt.Exec(user_id)
-	utils.CheckErr(err)
-
-	rows, err := res.RowsAffected()
-	utils.CheckErr(err)
-
-	defer stmt.Close()
-
-	if rows > 0 {
-		return true, nil
+func FindUser(db *sql.DB, guild_id string, user_id string) bool {
+	res := db.QueryRow("SELECT UID from User WHERE guild_id = ? AND UID = ?;",
+		guild_id, user_id).Scan(&user_id)
+	if res != nil {
+		return false
 	}
 
-	return false, nil
+	return true
 }
 
 func AddUser(db *sql.DB, user User) {
-	stmt, err := db.Prepare("INSERT OR IGNORE INTO User (UID) VALUES (?);")
+	stmt, err := db.Prepare("INSERT OR IGNORE INTO User (guild_id, UID) VALUES (?,?);")
 	utils.CheckErr(err)
 
-	res, err := stmt.Exec(user.UID)
+	res, err := stmt.Exec(user.Guild_ID, user.UID)
 	utils.CheckErr(err)
 
 	rows, err := res.RowsAffected()
@@ -40,12 +31,13 @@ func AddUser(db *sql.DB, user User) {
 
 	// Check if user was added because it didn't exist
 	if rows > 0 {
-		fmt.Printf("Added %v \n", user.UID)
+		log.Printf("Added User:%v - Guild:%v \n", user.UID, user.Guild_ID)
 	}
 }
 
-func GetThemesong(db *sql.DB, user_id string) (filePath string, ok bool) {
-	res, err := db.Query("SELECT Filepath from Themesong Where Themesong.user_id = ?;", user_id)
+func GetThemesong(db *sql.DB, guild_id string, user_id string) (filePath string, ok bool) {
+	res, err := db.Query("SELECT Filepath from Themesong Where Themesong.guild_id = ? AND Themesong.user_id = ?;",
+		guild_id, user_id)
 	utils.CheckErr(err)
 	defer res.Close()
 
