@@ -107,10 +107,10 @@ func sanitizeSetCommand(args []*discordgo.ApplicationCommandInteractionDataOptio
 		return "", "", "", fmt.Errorf("`%v` is not a valid url.", args[0].StringValue())
 	}
 
-	for i := 0; i < 1; i++ {
-		_, err := strconv.ParseFloat(args[i+1].StringValue(), 64)
+	for i := 1; i <= 2; i++ {
+		_, err := strconv.ParseFloat(args[i].StringValue(), 64)
 		if err != nil {
-			return "", "", "", fmt.Errorf("`%v` is not a valid time.", args[i+1].StringValue())
+			return "", "", "", fmt.Errorf("`%v` is not a valid time.", args[i].StringValue())
 		}
 	}
 
