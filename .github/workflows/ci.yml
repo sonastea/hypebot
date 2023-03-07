@@ -1,0 +1,36 @@
+name: ci/cd
+on:
+  push:
+    tags:
+      - "v*.*.*"
+jobs:
+  vps-prep:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pull repo and stop/rebuild container
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_PRIVATE_KEY }}
+          script: |
+            cd /home/johnny/hypebot
+            git pull
+            sudo docker stop hypebot
+            sudo docker rm -f hypebot
+            sudo docker build -t sonastea/hypebot .
+  vps-deployment:
+    needs: vps-prep
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy and run docker container
+        uses: appleboy/ssh-action@master
+        env:
+          TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_PRIVATE_KEY }}
+          envs: TOKEN
+          script: |
+            sudo docker run sonastea/hypebot:latest --name hypebot -t=$TOKEN
