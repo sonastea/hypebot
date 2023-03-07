@@ -17,6 +17,7 @@ RUN go mod download
 
 COPY . .
 
-RUN go build ./cmd/hypebot/
+RUN go build ./cmd/hypebot/ \
+  && chmod +x /app/yt-dlp
 
 CMD ["sh", "-c", "./hypebot -t=${TOKEN}"]

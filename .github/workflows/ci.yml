@@ -33,4 +33,4 @@ jobs:
           key: ${{ secrets.VPS_PRIVATE_KEY }}
           envs: TOKEN
           script: |
-            docker run sonastea/hypebot:latest --name hypebot -t=$TOKEN
+            docker run -d --name hypebot sonastea/hypebot:latest hypebot -t=$TOKEN
