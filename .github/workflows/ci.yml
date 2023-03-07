@@ -16,9 +16,9 @@ jobs:
           script: |
             cd /home/johnny/hypebot
             git pull
-            sudo docker stop hypebot
-            sudo docker rm -f hypebot
-            sudo docker build -t sonastea/hypebot .
+            docker stop hypebot
+            docker rm -f hypebot
+            docker build -t sonastea/hypebot .
   vps-deployment:
     needs: vps-prep
     runs-on: ubuntu-latest
@@ -33,4 +33,4 @@ jobs:
           key: ${{ secrets.VPS_PRIVATE_KEY }}
           envs: TOKEN
           script: |
-            sudo docker run sonastea/hypebot:latest --name hypebot -t=$TOKEN
+            docker run sonastea/hypebot:latest --name hypebot -t=$TOKEN
