@@ -26,6 +26,8 @@ RUN apk add --no-cache ffmpeg=5.1.2-r1 python3=3.10.10-r0
 
 COPY --from=builder /app/ /app/
 
+RUN mkdir -p /app/songs/
+
 WORKDIR /app
 
 CMD ["sh", "-c", "./hypebot -t=$TOKEN"]
