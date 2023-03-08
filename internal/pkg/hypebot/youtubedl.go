@@ -13,7 +13,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/google/uuid"
-	"github.com/jonas747/dca"
+	"github.com/robrotheram/dca"
 	"github.com/sonastea/hypebot/internal/pkg/datastore/themesongs"
 	"github.com/sonastea/hypebot/internal/pkg/datastore/users"
 	"github.com/sonastea/hypebot/internal/utils"

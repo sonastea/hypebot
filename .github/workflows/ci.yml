@@ -18,7 +18,7 @@ jobs:
             git pull
             docker stop hypebot
             docker rm -f hypebot
-            docker build -t sonastea/hypebot .
+            docker build -t sonastea/hypebot . -f prod.Dockerfile
   vps-deployment:
     needs: vps-prep
     runs-on: ubuntu-latest
@@ -33,4 +33,7 @@ jobs:
           key: ${{ secrets.VPS_PRIVATE_KEY }}
           envs: TOKEN
           script: |
-            docker run -d --name hypebot sonastea/hypebot:latest hypebot -t=$TOKEN
+            docker run -d --name hypebot \
+              --mount type=bind,src="$(pwd)"/songs,target=/app/songs \
+              --mount type=bind,src="$(pwd)"/hypebase.db,target=/app/hypebase.db \
+              sonastea/hypebot:latest hypebot -t=$TOKEN
