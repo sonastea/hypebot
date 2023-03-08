@@ -14,7 +14,7 @@ jobs:
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_PRIVATE_KEY }}
           script: |
-            cd /home/johnny/hypebot
+            cd $(pwd)/hypebot
             git pull
             docker stop hypebot
             docker rm -f hypebot
@@ -33,7 +33,8 @@ jobs:
           key: ${{ secrets.VPS_PRIVATE_KEY }}
           envs: TOKEN
           script: |
+            cd $(pwd)/hypebot
             docker run -d --name hypebot \
-              --mount type=bind,src="$(pwd)"/hypebot/songs,target=/app/songs \
-              --mount type=bind,src="$(pwd)"/hypebot/hypebase.db,target=/app/hypebase.db \
+              --mount type=bind,src="$(pwd)"/songs,target=/app/songs \
+              --mount type=bind,src="$(pwd)"/hypebase.db,target=/app/hypebase.db \
               sonastea/hypebot:latest hypebot -t=$TOKEN
