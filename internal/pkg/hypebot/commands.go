@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/sonastea/hypebot/internal/pkg/datastore/users"
@@ -28,13 +29,13 @@ var (
 				{
 					Type:        discordgo.ApplicationCommandOptionString,
 					Name:        "start-time",
-					Description: "Starting time of the song in seconds.",
+					Description: "Starting time of the song in 6m9s format.",
 					Required:    true,
 				},
 				{
 					Type:        discordgo.ApplicationCommandOptionString,
 					Name:        "duration",
-					Description: "Length to play your hype song from the star time.",
+					Description: "Length to play your hype song from the start time in seconds. [Default: 3, Max: 15]",
 					Required:    true,
 				},
 			},
@@ -96,24 +97,18 @@ func (hb *HypeBot) setCommand(s *discordgo.Session, i *discordgo.InteractionCrea
 
 	url, start, duration, err := sanitizeSetCommand(opts)
 	if err != nil {
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Flags:   discordgo.MessageFlagsEphemeral,
-				Content: err.Error(),
-			},
+		msg = err.Error()
+		_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+			Content: &msg,
 		})
 		return
 	}
 
 	filePath, err := hb.downloadVideo(url, start, duration)
 	if err != nil {
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Flags:   discordgo.MessageFlagsEphemeral,
-				Content: err.Error(),
-			},
+		msg = err.Error()
+		_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+			Content: &msg,
 		})
 		return
 	}
@@ -138,12 +133,21 @@ func sanitizeSetCommand(args []*discordgo.ApplicationCommandInteractionDataOptio
 		return "", "", "", fmt.Errorf("`%v` is not a valid url.", args[0].StringValue())
 	}
 
-	for i := 1; i <= 2; i++ {
-		_, err := strconv.ParseFloat(args[i].StringValue(), 64)
-		if err != nil {
-			return "", "", "", fmt.Errorf("`%v` is not a valid time.", args[i].StringValue())
-		}
+	start_time, err := time.ParseDuration(args[1].StringValue())
+	if err != nil {
+		return "", "", "", fmt.Errorf("`%v`", err.Error())
 	}
 
-	return args[0].StringValue(), args[1].StringValue(), args[2].StringValue(), nil
+	dur, err := strconv.ParseFloat(args[2].StringValue(), 64)
+	if err != nil {
+		return "", "", "", fmt.Errorf("`%v` is not a valid time.", dur)
+	}
+
+	if dur <= 0 || dur > 15 {
+		return "", "", "", fmt.Errorf("duration `%v` can't be less than **`0`** or greater than **`15`**.", dur)
+	}
+
+	convert_start_time := strconv.FormatFloat(start_time.Seconds(), 'f', -1, 64)
+
+	return args[0].StringValue(), convert_start_time, args[2].StringValue(), nil
 }

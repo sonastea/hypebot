@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strconv"
 	"sync"
 	"time"
 
@@ -24,6 +25,7 @@ type VideoMetaData struct {
 	Title       string `json:"title"`
 	OriginalURL string `json:"original_url"`
 	UploadDate  string `json:"upload_date"`
+	Duration    uint64 `json:"duration"`
 }
 
 func (hb *HypeBot) setThemesong(file_path string, guild_id string, user_id string) string {
@@ -128,6 +130,16 @@ func (hb *HypeBot) downloadVideo(url string, start_time string, duration string)
 			err = json.Unmarshal(data, &videoMetaData)
 			if err != nil {
 				return "", err
+			}
+
+			// Check for valid start time
+			st, err := strconv.ParseUint(start_time, 10, 64)
+			if err != nil {
+				return "", err
+			}
+
+			if st < 0 || st > videoMetaData.Duration {
+				return "", errors.New("Invalid start time ⚠️")
 			}
 
 			// Convert opus to dca so we can send to discord voice
