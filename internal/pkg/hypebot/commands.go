@@ -46,27 +46,52 @@ var (
 )
 
 func (hb *HypeBot) clearCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Flags:   discordgo.MessageFlagsEphemeral,
+			Content: "Processing clear command...",
+		},
+	})
+
 	exists := users.FindUser(hb.db, i.GuildID, i.Member.User.ID)
 
 	if !exists {
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "You have not set a themesong with HypeBot.",
-			},
+		msg = "You have not set a themesong with HypeBot."
+		_, err := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+			Content: &msg,
 		})
+
+		if err != nil {
+			s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+				Content: "Something went wrong",
+			})
+			return
+		}
 	} else {
 		msg = hb.removeThemesong(i.GuildID, i.Member.User.ID)
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: msg,
-			},
+		_, err := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+			Content: &msg,
 		})
+
+		if err != nil {
+			s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+				Content: "Something went wrong",
+			})
+			return
+		}
 	}
 }
 
 func (hb *HypeBot) setCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Flags:   discordgo.MessageFlagsEphemeral,
+			Content: "Processing set command...",
+		},
+	})
+
 	opts := i.ApplicationCommandData().Options
 
 	url, start, duration, err := sanitizeSetCommand(opts)
@@ -74,6 +99,7 @@ func (hb *HypeBot) setCommand(s *discordgo.Session, i *discordgo.InteractionCrea
 		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
+				Flags:   discordgo.MessageFlagsEphemeral,
 				Content: err.Error(),
 			},
 		})
@@ -85,6 +111,7 @@ func (hb *HypeBot) setCommand(s *discordgo.Session, i *discordgo.InteractionCrea
 		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
+				Flags:   discordgo.MessageFlagsEphemeral,
 				Content: err.Error(),
 			},
 		})
@@ -93,12 +120,16 @@ func (hb *HypeBot) setCommand(s *discordgo.Session, i *discordgo.InteractionCrea
 
 	msg = hb.setThemesong(filePath, i.GuildID, i.Member.User.ID)
 
-	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: msg,
-		},
+	_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+		Content: &msg,
 	})
+
+	if err != nil {
+		s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+			Content: "Something went wrong",
+		})
+		return
+	}
 }
 
 func sanitizeSetCommand(args []*discordgo.ApplicationCommandInteractionDataOption) (string, string, string, error) {
