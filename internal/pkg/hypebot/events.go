@@ -10,7 +10,7 @@ import (
 )
 
 func (hb *HypeBot) listenVoiceStateUpdate(s *discordgo.Session, e *discordgo.VoiceStateUpdate) {
-	if e.VoiceState.UserID == "994803132259381291" {
+	if e.VoiceState.UserID == "994803132259381291" || e.VoiceState.UserID == "1083967553887555595" {
 		return
 	}
 
