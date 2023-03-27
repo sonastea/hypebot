@@ -87,6 +87,11 @@ func (hb *HypeBot) downloadVideo(url string, start_time string, duration string)
 	defer mu.Unlock()
 	var filePath string
 
+	valid, err := hb.validateUrl(url)
+	if !valid {
+		return "", err
+	}
+
 	ytdl, err := exec.LookPath("yt-dlp")
 	if err != nil {
 		utils.CheckErrFatal(err)
@@ -117,6 +122,7 @@ func (hb *HypeBot) downloadVideo(url string, start_time string, duration string)
 			"--no-check-formats",
 			"--print-json",
 			"--quiet",
+			"--verbose",
 			"--output", fmt.Sprintf("%s", opusFile),
 			"--downloader", "ffmpeg",
 			"--downloader-args", fmt.Sprintf("ffmpeg:-ss %s -t %s -b:a 96k", start_time, duration),
@@ -124,8 +130,14 @@ func (hb *HypeBot) downloadVideo(url string, start_time string, duration string)
 
 		cmd := exec.Command(ytdl, args...)
 		if data, err := cmd.Output(); err != nil && err.Error() != "exit status 101" {
-			log.Printf("{yt-dlp} %v\n", err)
+			log.Printf("{yt-dlp}-unhandled: %v (%v, %v, %v) \n", err, url, start_time, duration)
+			return "", errors.New("There was an error processing your request ⚠️")
 		} else {
+			if len(data) < 1 {
+				log.Printf("{yt-dlp}-no_data: %v (%v, %v, %v) \n", err, url, start_time, duration)
+				return "", errors.New("Unable to retrieve requested audio ⚠️")
+			}
+
 			videoMetaData := VideoMetaData{}
 			err = json.Unmarshal(data, &videoMetaData)
 			if err != nil {
@@ -161,4 +173,31 @@ func (hb *HypeBot) downloadVideo(url string, start_time string, duration string)
 	}
 
 	return filePath, nil
+}
+
+func (hb *HypeBot) validateUrl(url string) (valid bool, err error) {
+	ytdl, err := exec.LookPath("yt-dlp")
+	if err != nil {
+		utils.CheckErrFatal(err)
+	}
+
+	args := []string{
+		url,
+		"--extract-audio",
+		"--ignore-errors",
+		"--no-playlist",
+		"--no-check-formats",
+		"--match-filter",
+		"!is_live",
+		"--simulate",
+		"--verbose",
+	}
+
+	cmd := exec.Command(ytdl, args...)
+	if _, err := cmd.Output(); err != nil && err.Error() != "exit status 101" {
+		log.Printf("{yt-dlp}-not_live: %v \n", err)
+		return false, errors.New("Unable to process a live video ⚠️")
+	}
+
+	return true, nil
 }
