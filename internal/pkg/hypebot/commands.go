@@ -29,13 +29,13 @@ var (
 				{
 					Type:        discordgo.ApplicationCommandOptionString,
 					Name:        "start-time",
-					Description: "Starting time of the song in 6m9s format.",
+					Description: "Timestamp to begin song in 9m45s format.",
 					Required:    true,
 				},
 				{
 					Type:        discordgo.ApplicationCommandOptionString,
 					Name:        "duration",
-					Description: "Length to play your hype song from the start time in seconds. [Default: 3, Max: 15]",
+					Description: "How long to play your hype song from start time in seconds. (Default: 3, Max: 15)",
 					Required:    true,
 				},
 			},
