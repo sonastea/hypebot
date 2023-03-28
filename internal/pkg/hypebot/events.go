@@ -35,7 +35,9 @@ func (hb *HypeBot) listenVoiceStateUpdate(s *discordgo.Session, e *discordgo.Voi
 				log.Println(err)
 			}
 
-			err = hb.playThemesong(filePath, e.VoiceState.GuildID, e.ChannelID, vc)
+			hb.guildStore[e.GuildID].VCS[e.ChannelID] = append(hb.guildStore[e.GuildID].VCS[e.ChannelID], filePath)
+
+			err = hb.playThemesong(e, e.ChannelID, vc)
 			if err != nil {
 				fmt.Println(err)
 			}

@@ -43,40 +43,53 @@ func (hb *HypeBot) removeThemesong(guild_id string, user_id string) string {
 	return themesongs.RemoveThemesong(hb.db, guild_id, user_id)
 }
 
-func (hb *HypeBot) playThemesong(file_path string, guild_id string, channel_id string, vc *discordgo.VoiceConnection) (err error) {
+func (hb *HypeBot) playThemesong(e *discordgo.VoiceStateUpdate, channel_id string, vc *discordgo.VoiceConnection) (err error) {
 	if vc == nil {
-		vc, err = hb.s.ChannelVoiceJoin(guild_id, channel_id, false, true)
-	}
-	if err != nil {
-		return err
-	}
-
-	file, err := os.Open(file_path)
-	utils.CheckErr(err)
-	defer file.Close()
-
-	decoder := dca.NewDecoder(file)
-	_ = vc.Speaking(true)
-	for {
-		frame, err := decoder.OpusFrame()
+		vc, err = hb.s.ChannelVoiceJoin(e.VoiceState.GuildID, channel_id, false, true)
 		if err != nil {
-			if err != io.EOF {
-				return err
-			}
-			break
-		}
-		select {
-		case vc.OpusSend <- frame:
-		case <-time.After(time.Second * 5):
-			break
+			return err
 		}
 	}
 
-	err = vc.Speaking(false)
-	utils.CheckErr(err)
+	if len(hb.guildStore[e.VoiceState.GuildID].VCS[channel_id]) > 1 {
+		return nil
+	}
 
-	err = vc.Disconnect()
-	utils.CheckErr(err)
+	for len(hb.guildStore[e.VoiceState.GuildID].VCS[channel_id]) > 0 {
+		file, err := os.Open(hb.guildStore[e.VoiceState.GuildID].VCS[channel_id][0])
+		utils.CheckErr(err)
+		defer file.Close()
+
+		decoder := dca.NewDecoder(file)
+		_ = vc.Speaking(true)
+		for {
+			frame, err := decoder.OpusFrame()
+			if err != nil {
+				if err != io.EOF {
+					return err
+				}
+				break
+			}
+			select {
+			case vc.OpusSend <- frame:
+			case <-time.After(time.Second * 5):
+				break
+			}
+		}
+
+		err = vc.Speaking(false)
+		utils.CheckErr(err)
+
+		if len(hb.guildStore[e.VoiceState.GuildID].VCS[channel_id]) > 1 {
+			hb.guildStore[e.VoiceState.GuildID].VCS[channel_id] = hb.guildStore[e.VoiceState.GuildID].VCS[channel_id][1:]
+		} else if len(hb.guildStore[e.VoiceState.GuildID].VCS[channel_id]) == 1 {
+			time.Sleep(1500 * time.Millisecond)
+			hb.guildStore[e.VoiceState.GuildID].VCS[channel_id] = hb.guildStore[e.VoiceState.GuildID].VCS[channel_id][:0]
+			vc.Disconnect()
+		}
+
+		time.Sleep(1500 * time.Millisecond)
+	}
 
 	return nil
 }

@@ -26,7 +26,7 @@ type HypeBot struct {
 	s  *discordgo.Session
 	db *sql.DB
 
-	guildStore guilds.GuildStore
+	guildStore guilds.Store
 }
 
 func init() {
