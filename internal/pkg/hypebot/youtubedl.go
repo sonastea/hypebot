@@ -44,14 +44,7 @@ func (hb *HypeBot) removeThemesong(guild_id string, user_id string) string {
 }
 
 func (hb *HypeBot) playThemesong(e *discordgo.VoiceStateUpdate, channel_id string, vc *discordgo.VoiceConnection) (err error) {
-	if vc == nil {
-		vc, err = hb.s.ChannelVoiceJoin(e.VoiceState.GuildID, channel_id, false, true)
-		if err != nil {
-			return err
-		}
-	}
-
-	if len(hb.guildStore[e.VoiceState.GuildID].VCS[channel_id]) > 1 {
+	if vc == nil || len(hb.guildStore[e.VoiceState.GuildID].VCS[channel_id]) > 1 {
 		return nil
 	}
 
@@ -80,11 +73,12 @@ func (hb *HypeBot) playThemesong(e *discordgo.VoiceStateUpdate, channel_id strin
 		err = vc.Speaking(false)
 		utils.CheckErr(err)
 
-		if len(hb.guildStore[e.VoiceState.GuildID].VCS[channel_id]) > 1 {
-			hb.guildStore[e.VoiceState.GuildID].VCS[channel_id] = hb.guildStore[e.VoiceState.GuildID].VCS[channel_id][1:]
-		} else if len(hb.guildStore[e.VoiceState.GuildID].VCS[channel_id]) == 1 {
+		if len(hb.guildStore[e.GuildID].VCS[channel_id]) > 1 {
+			hb.guildStore[e.GuildID].VCS[channel_id] = hb.guildStore[e.GuildID].VCS[channel_id][1:]
+		} else if len(hb.guildStore[e.GuildID].VCS[channel_id]) == 1 {
 			time.Sleep(1500 * time.Millisecond)
-			hb.guildStore[e.VoiceState.GuildID].VCS[channel_id] = hb.guildStore[e.VoiceState.GuildID].VCS[channel_id][:0]
+			hb.guildStore[e.GuildID].VCS[channel_id] = hb.guildStore[e.VoiceState.GuildID].VCS[channel_id][:0]
+			hb.guildStore[e.GuildID].Playing = false
 			vc.Disconnect()
 		}
 

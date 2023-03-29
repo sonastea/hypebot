@@ -18,6 +18,7 @@ import (
 // Variables used for command line parameters
 var (
 	Token          string
+	BotID          string
 	GuildID        string
 	RemoveCommands bool
 )
@@ -31,6 +32,7 @@ type HypeBot struct {
 
 func init() {
 	flag.StringVar(&Token, "t", "", "Bot Token")
+	flag.StringVar(&BotID, "bid", "994803132259381291", "User ID of bot")
 	flag.StringVar(&GuildID, "g", "", "Guild in which bot is running")
 	flag.BoolVar(&RemoveCommands, "rmcmd", true, "Remove all commands after shutdowning or not")
 	flag.Parse()
