@@ -41,7 +41,7 @@ func (hb *HypeBot) listenVoiceStateUpdate(s *discordgo.Session, e *discordgo.Voi
 			var vc *discordgo.VoiceConnection
 			var err error
 
-            hb.guildStore[e.GuildID].VCS[e.ChannelID] = append(hb.guildStore[e.GuildID].VCS[e.ChannelID], filePath)
+			hb.guildStore[e.GuildID].VCS[e.ChannelID] = append(hb.guildStore[e.GuildID].VCS[e.ChannelID], filePath)
 			if !hb.guildStore[e.GuildID].Playing {
 				vc, err = hb.s.ChannelVoiceJoin(e.VoiceState.GuildID, e.ChannelID, false, false)
 				if err != nil {
@@ -49,7 +49,7 @@ func (hb *HypeBot) listenVoiceStateUpdate(s *discordgo.Session, e *discordgo.Voi
 				}
 			}
 
-			if len(hb.guildStore[e.VoiceState.GuildID].VCS[e.ChannelID]) > 1 {
+			if vc == nil || len(hb.guildStore[e.GuildID].VCS[e.ChannelID]) > 1 {
 				return
 			}
 

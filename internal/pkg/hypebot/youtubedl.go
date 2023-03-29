@@ -44,10 +44,6 @@ func (hb *HypeBot) removeThemesong(guild_id string, user_id string) string {
 }
 
 func (hb *HypeBot) playThemesong(e *discordgo.VoiceStateUpdate, channel_id string, vc *discordgo.VoiceConnection) (err error) {
-	if vc == nil || len(hb.guildStore[e.VoiceState.GuildID].VCS[channel_id]) > 1 {
-		return nil
-	}
-
 	for len(hb.guildStore[e.VoiceState.GuildID].VCS[channel_id]) > 0 {
 		file, err := os.Open(hb.guildStore[e.VoiceState.GuildID].VCS[channel_id][0])
 		utils.CheckErr(err)
