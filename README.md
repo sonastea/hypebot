@@ -1,6 +1,6 @@
 # HypeBot
 
-> HypeBot is a self-hosted bot that plays a user-selected themesong upon entering a voice channel.
+> HypeBot is a discord bot that plays a user selected song upon entering a voice channel.
 
 ## Running HypeBot
 
