@@ -35,10 +35,11 @@ func init() {
 	flag.StringVar(&BotID, "bid", "994803132259381291", "User ID of bot")
 	flag.StringVar(&GuildID, "g", "", "Guild in which bot is running")
 	flag.BoolVar(&RemoveCommands, "rmcmd", true, "Remove all commands after shutdowning or not")
-	flag.Parse()
 }
 
 func NewHypeBot() (hb *HypeBot, err error) {
+	flag.Parse()
+
 	// Create discordgo session using a bot token
 	dg, err := discordgo.New("Bot " + Token)
 	utils.CheckErrFatal(err)
