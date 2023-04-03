@@ -51,3 +51,16 @@ func GetThemesong(db *sql.DB, guild_id string, user_id string) (filePath string,
 
 	return "", false
 }
+
+func GetTotalServed(db *sql.DB) (uint64, bool) {
+	var totalUsers uint64
+
+	err := db.QueryRow("SELECT COUNT(*) FROM User;").Scan(&totalUsers)
+	switch {
+	case err != nil:
+		utils.CheckErr(err)
+		return 0, false
+	default:
+		return totalUsers, true
+	}
+}

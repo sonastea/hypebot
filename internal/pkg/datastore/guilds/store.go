@@ -83,3 +83,16 @@ func RemoveGuild(db *sql.DB, guild_id string) {
 		log.Printf("GuildID:%v is now inactive. \n", guild_id)
 	}
 }
+
+func GetTotalServed(db *sql.DB) (uint64, bool) {
+	var totalUsers uint64
+
+	err := db.QueryRow("SELECT COUNT(*) FROM Guild;").Scan(&totalUsers)
+	switch {
+	case err != nil:
+		utils.CheckErr(err)
+		return 0, false
+	default:
+		return totalUsers, true
+	}
+}
