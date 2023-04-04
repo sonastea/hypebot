@@ -6,9 +6,15 @@ require (
 	github.com/bwmarrin/discordgo v0.27.1
 	github.com/google/uuid v1.3.0
 	github.com/robrotheram/dca v0.0.0-20230207201134-9204c71f99b8
+	github.com/stretchr/testify v1.8.2
 )
 
-require github.com/jonas747/ogg v0.0.0-20161220051205-b4f6f4cf3757 // indirect
+require (
+	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/jonas747/ogg v0.0.0-20161220051205-b4f6f4cf3757 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
+)
 
 require (
 	github.com/gorilla/websocket v1.5.0 // indirect

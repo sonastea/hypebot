@@ -25,7 +25,7 @@ func SetThemesong(db *sql.DB, file_path string, guild_id string, user_id string)
 	// Check if themesong was added to the database
 	if rows > 0 {
 		message := fmt.Sprintf("Added themesong ✅")
-        log.Printf("%v for Guild:%v - User:%v \n", message, guild_id, user_id)
+		log.Printf("%v for Guild:%v - User:%v \n", message, guild_id, user_id)
 		return message
 	}
 
@@ -47,7 +47,7 @@ func UpdateThemesong(db *sql.DB, file_path string, guild_id string, user_id stri
 
 	if rows > 0 {
 		message := fmt.Sprintf("Updated themesong ✅")
-        log.Printf("%v for Guild:%v - User:%v \n", message, guild_id, user_id)
+		log.Printf("%v for Guild:%v - User:%v \n", message, guild_id, user_id)
 		return message
 	}
 
@@ -70,7 +70,7 @@ func RemoveThemesong(db *sql.DB, guild_id string, user_id string) (message strin
 	// Check if themesong was updated true
 	if rows > 0 {
 		message := fmt.Sprintf("Removed themesong ❌")
-        log.Printf("%v for Guild:%v - User:%v \n", message, guild_id, user_id)
+		log.Printf("%v for Guild:%v - User:%v \n", message, guild_id, user_id)
 		return message
 	}
 

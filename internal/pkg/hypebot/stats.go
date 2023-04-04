@@ -31,14 +31,14 @@ func GetStats() (uint64, uint64) {
 	err := error(nil)
 	ctx := context.Background()
 
-    prev := TotalServers
+	prev := TotalServers
 	err = db.QueryRowContext(ctx, "SELECT COUNT(*) FROM Guild;").Scan(&TotalServers)
 	if err != nil {
 		utils.CheckErr(err)
 		TotalServers = prev
 	}
 
-    prev = TotalUsers
+	prev = TotalUsers
 	err = db.QueryRowContext(ctx, "SELECT COUNT(*) FROM Guild;").Scan(&TotalUsers)
 	if err != nil {
 		utils.CheckErr(err)

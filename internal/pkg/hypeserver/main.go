@@ -14,28 +14,32 @@ import (
 	"github.com/sonastea/hypebot/internal/pkg/hypebot"
 )
 
-type hypeserver struct {
+type HypeServer struct {
 	server  *http.Server
 	servers uint64
 	users   uint64
 }
 
-var s hypeserver
+var totalServers, totalUsers uint64
 
-func init() {
+func NewHypeServer() *HypeServer {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/stats", stats)
 
-	s.server = &http.Server{
-		Addr:    ":3000",
-		Handler: mux,
+	s := &HypeServer{
+		server: &http.Server{
+			Addr:    ":3000",
+			Handler: mux,
+		},
 	}
+
+	return s
 }
 
-func Run() {
+func (hs *HypeServer) Run() {
 	log.Println("HypeServer listening on port 3000")
 	go func() {
-		if err := s.server.ListenAndServe(); err != http.ErrServerClosed {
+		if err := hs.server.ListenAndServe(); err != http.ErrServerClosed {
 			log.Fatalf("HTTP server: %s", err)
 		}
 	}()
@@ -51,7 +55,7 @@ func Run() {
 	cleansedCtx, cancelShutdown := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelShutdown()
 
-	if err := s.server.Shutdown(cleansedCtx); err != nil {
+	if err := hs.server.Shutdown(cleansedCtx); err != nil {
 		log.Printf("Shutdown error: %v\n", err)
 	} else {
 		log.Printf("Shutdown successful\n")
@@ -60,10 +64,10 @@ func Run() {
 
 func stats(w http.ResponseWriter, r *http.Request) {
 	data := make(map[string]string)
-	s.servers, s.users = hypebot.GetStats()
+	totalServers, totalUsers = hypebot.GetStats()
 
-	data["servers"] = strconv.FormatUint(s.servers, 10)
-	data["users"] = strconv.FormatUint(s.users, 10)
+	data["servers"] = strconv.FormatUint(totalServers, 10)
+	data["users"] = strconv.FormatUint(totalUsers, 10)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)

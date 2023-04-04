@@ -5,5 +5,6 @@ import (
 )
 
 func main() {
-	hypeserver.Run()
+	hs := hypeserver.NewHypeServer()
+	hs.Run()
 }
