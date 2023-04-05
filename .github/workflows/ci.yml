@@ -1,27 +1,15 @@
 name: ci/cd
 on:
   push:
-    tags:
-      - "v*.*.*"
+    tags: ["v*.*.*"]
+  workflow_run:
+    workflows: [Images]
+    types: [completed]
+
 jobs:
-  vps-prep:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Pull repo and stop/rebuild container
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USERNAME }}
-          key: ${{ secrets.VPS_PRIVATE_KEY }}
-          script: |
-            cd $(pwd)/hypebot
-            git pull
-            docker stop hypebot
-            docker rm -f hypebot
-            docker build -t sonastea/hypebot . -f prod.Dockerfile
   vps-deployment:
-    needs: vps-prep
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Deploy and run docker container
         uses: appleboy/ssh-action@master
@@ -31,10 +19,4 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_PRIVATE_KEY }}
-          envs: TOKEN
-          script: |
-            cd $(pwd)/hypebot
-            docker run -d --name hypebot \
-              --mount type=bind,src="$(pwd)"/songs,target=/app/songs \
-              --mount type=bind,src="$(pwd)"/hypebase.db,target=/app/hypebase.db \
-              sonastea/hypebot:latest hypebot -t=$TOKEN
+          script: sh deploy-hypestack.sh

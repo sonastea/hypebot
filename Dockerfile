@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM golang:1.20-alpine
+FROM golang:1.20.2-alpine
 
 ENV PATH="${PATH}:/app/"
 

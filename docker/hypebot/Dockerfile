@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM golang:1.20-alpine as builder
+FROM golang:1.20.2-alpine as builder
 
 ENV PATH="${PATH}:/app/"
 
@@ -18,7 +18,7 @@ COPY . .
 
 RUN go build ./cmd/hypebot/ && chmod +x /app/yt-dlp
 
-FROM alpine:3.17.2
+FROM alpine:3.17.3
 
 ENV PATH="${PATH}:/app/"
 
@@ -31,3 +31,4 @@ RUN mkdir -p /app/songs/
 WORKDIR /app
 
 CMD ["sh", "-c", "./hypebot -t=$TOKEN"]
+
