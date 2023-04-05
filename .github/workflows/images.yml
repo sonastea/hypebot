@@ -1,4 +1,4 @@
-name: Images
+name: Build and push images
 on:
   push:
     branches: ["main"]
@@ -33,7 +33,7 @@ jobs:
         uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
         with:
           context: .
-          dockerfile: ./docker/hypebot/Dockerfile
+          file: ./docker/hypebot/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -65,7 +65,7 @@ jobs:
         uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
         with:
           context: .
-          dockerfile: ./docker/hypeserver/Dockerfile
+          file: ./docker/hypeserver/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

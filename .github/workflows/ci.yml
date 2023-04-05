@@ -3,7 +3,7 @@ on:
   push:
     tags: ["v*.*.*"]
   workflow_run:
-    workflows: [Images]
+    workflows: [Build and push images]
     types: [completed]
 
 jobs:
