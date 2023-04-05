@@ -2,7 +2,7 @@ version: "3.9"
 services:
   hypebot:
     container_name: hypebot
-    image: sonastea/hypebot:latest
+    image: "ghcr.io/sonastea/hypebot:master"
     build:
       context: .
       dockerfile: ./docker/hypebot/Dockerfile
@@ -15,7 +15,7 @@ services:
 
   hypeserver:
     container_name: hypeserver
-    image: sonastea/hypeserver:latest
+    image: "ghcr.io/sonastea/hypeserver:master"
     build:
       context: .
       dockerfile: ./docker/hypeserver/Dockerfile
