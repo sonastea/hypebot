@@ -39,7 +39,7 @@ func GetStats() (uint64, uint64) {
 	}
 
 	prev = TotalUsers
-	err = db.QueryRowContext(ctx, "SELECT COUNT(*) FROM Guild;").Scan(&TotalUsers)
+	err = db.QueryRowContext(ctx, "SELECT COUNT(*) FROM User;").Scan(&TotalUsers)
 	if err != nil {
 		utils.CheckErr(err)
 		TotalUsers = prev
