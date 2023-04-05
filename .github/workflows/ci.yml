@@ -9,7 +9,7 @@ on:
 jobs:
   vps-deployment:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' && startsWith(github.ref, 'refs/tags/v') }}
     steps:
       - name: Deploy and run docker container
         uses: appleboy/ssh-action@master
