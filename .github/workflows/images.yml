@@ -1,7 +1,7 @@
 name: Build and push images
 on:
   push:
-    branches: ["main"]
+    branches: ["master"]
     paths: ["cmd/**", "internal/**"]
   workflow_dispatch:
 
