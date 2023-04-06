@@ -5,6 +5,8 @@ services:
     image: "ghcr.io/sonastea/hypebot:master"
     build:
       context: .
+      args:
+        TOKEN: ${TOKEN}
       dockerfile: ./docker/hypebot/Dockerfile
     restart: unless-stopped
     environment:
