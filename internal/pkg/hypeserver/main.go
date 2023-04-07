@@ -63,6 +63,8 @@ func (hs *HypeServer) Run() {
 }
 
 func stats(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w, r)
+
 	data := make(map[string]string)
 	totalServers, totalUsers = hypebot.GetStats()
 
@@ -74,4 +76,8 @@ func stats(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(data)
 
 	return
+}
+
+func enableCors(w *http.ResponseWriter, r *http.Request) {
+	(*w).Header().Set("Access-Control-Allow-Origin", r.Header.Get("Origin"))
 }

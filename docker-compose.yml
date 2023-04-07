@@ -9,6 +9,7 @@ services:
         TOKEN: ${TOKEN}
       dockerfile: ./docker/hypebot/Dockerfile
     restart: unless-stopped
+    networks: ["caddy_default"]
     environment:
       - TOKEN
     volumes:
@@ -22,7 +23,12 @@ services:
       context: .
       dockerfile: ./docker/hypeserver/Dockerfile
     restart: unless-stopped
+    networks: ["caddy_default"]
     ports:
       - "3000:3000"
     depends_on:
       - hypebot
+
+networks:
+  caddy_default:
+    external: true
