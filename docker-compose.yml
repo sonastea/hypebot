@@ -28,6 +28,8 @@ services:
       - "3000:3000"
     depends_on:
       - hypebot
+    volumes:
+      - "./hypebase.db:/app/hypebase.db"
 
 networks:
   caddy_default:
