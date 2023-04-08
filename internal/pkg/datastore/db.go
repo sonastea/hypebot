@@ -36,16 +36,20 @@ const create string = `
     FOREIGN KEY ("User_ID") REFERENCES User(UID)
     );`
 
-func NewDBConn() (db *sql.DB, err error) {
-	// Create a new database connection
-	conn, err := sql.Open("sqlite3", "hypebase.db")
+var conn *sql.DB
+
+func init() {
+    var err error
+
+    conn, err = sql.Open("sqlite3", "file:hypebase.db?mode=rwc&journal_mode=WAL")
 	utils.CheckErr(err)
 
 	// Setup schema
 	if _, err := conn.Exec(create); err != nil {
-		return nil, err
+        utils.CheckErrFatal(err)
 	}
+}
 
-	// Return a new database connection
+func GetDBConn() (db *sql.DB, err error) {
 	return conn, nil
 }

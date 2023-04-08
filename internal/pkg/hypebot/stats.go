@@ -15,7 +15,7 @@ var TotalServers, TotalUsers uint64
 
 func init() {
 	var err error
-	db, err = datastore.NewDBConn()
+	db, err = datastore.GetDBConn()
 	utils.CheckErrFatal(err)
 }
 

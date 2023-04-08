@@ -44,7 +44,7 @@ func NewHypeBot() (hb *HypeBot, err error) {
 	dg, err := discordgo.New("Bot " + Token)
 	utils.CheckErrFatal(err)
 
-	db, err := datastore.NewDBConn()
+	db, err := datastore.GetDBConn()
 	utils.CheckErrFatal(err)
 
 	return &HypeBot{
