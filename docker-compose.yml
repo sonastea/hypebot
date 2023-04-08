@@ -3,6 +3,7 @@ services:
   hypebot:
     container_name: hypebot
     image: "ghcr.io/sonastea/hypebot:master"
+    env_file: .env
     build:
       context: .
       args:
