@@ -20,7 +20,7 @@ FROM alpine:3.17.3
 
 ENV PATH="${PATH}:/app/"
 
-COPY --from=builder /app/ /app/
+COPY --from=builder /app/hypeserver /app/hypeserver
 
 WORKDIR /app
 

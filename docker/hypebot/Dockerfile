@@ -24,7 +24,8 @@ ENV PATH="${PATH}:/app/"
 
 RUN apk add --no-cache ffmpeg=5.1.3-r0 python3=3.10.11-r0
 
-COPY --from=builder /app/ /app/
+COPY --from=builder /app/hypebot /app/hypebot
+COPY --from=builder /app/yt-dlp /app/yt-dlp
 
 RUN mkdir -p /app/songs/
 

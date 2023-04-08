@@ -29,7 +29,7 @@ services:
     depends_on:
       - hypebot
     volumes:
-      - "./hypebase.db:/app/hypebase.db"
+      - "./hypebase.db:/app/hypebase.db:ro"
 
 networks:
   caddy_default:
