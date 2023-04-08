@@ -19,4 +19,7 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_PRIVATE_KEY }}
-          script: sh deploy-hypestack.sh
+          script: |
+            docker rm -f hypebot hypeserver
+            cd $(pwd)/hypebot
+            docker compose up -d
