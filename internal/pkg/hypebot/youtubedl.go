@@ -1,6 +1,7 @@
 package hypebot
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -111,7 +112,9 @@ func (hb *HypeBot) downloadVideo(url string, start_time string, duration string)
 			return "", err
 		}
 		fileName := uuid.New().String()
+		fileNameComp := uuid.New().String()
 		opusFile := songsDir + fileName + ".opus"
+		opusFileComp := songsDir + fileNameComp + ".opus"
 		filePath = fmt.Sprintf("./songs/%s.dca", fileName)
 
 		args := []string{
@@ -125,7 +128,6 @@ func (hb *HypeBot) downloadVideo(url string, start_time string, duration string)
 			"--no-check-formats",
 			"--print-json",
 			"--quiet",
-			"--verbose",
 			"--output", fmt.Sprintf("%s", opusFile),
 			"--downloader", "ffmpeg",
 			"--downloader-args", fmt.Sprintf("ffmpeg:-ss %s -t %s -b:a 96k", start_time, duration),
@@ -157,9 +159,28 @@ func (hb *HypeBot) downloadVideo(url string, start_time string, duration string)
 				return "", errors.New("Invalid start time ⚠️")
 			}
 
+			fmpg, err := exec.LookPath("ffmpeg")
+			if err != nil {
+				utils.CheckErrFatal(err)
+			}
+			args := []string{
+				"-i",
+				opusFile,
+				"-filter:a",
+				"loudnorm",
+				opusFileComp,
+			}
+
+			cmd = exec.Command(fmpg, args...)
+			btt, err := cmd.CombinedOutput()
+			if err != nil {
+				log.Println(string(btt))
+				return "", err
+			}
+
 			// Convert opus to dca so we can send to discord voice
-			log.Println("Converting " + fileName + ".mp3 to " + fileName + ".dca")
-			encodeSession, _ := dca.EncodeFile(opusFile, dca.StdEncodeOptions)
+			log.Println("Converting " + fileName + ".opus to " + fileName + ".dca")
+			encodeSession, _ := dca.EncodeFile(opusFileComp, dca.StdEncodeOptions)
 			defer encodeSession.Cleanup()
 
 			dcaFile, err := os.Create(songsDir + fileName + ".dca")
@@ -167,6 +188,11 @@ func (hb *HypeBot) downloadVideo(url string, start_time string, duration string)
 			io.Copy(dcaFile, encodeSession)
 
 			del := exec.Command("rm", opusFile)
+			if del.Run() != nil {
+				utils.CheckErr(err)
+			}
+
+			del = exec.Command("rm", opusFileComp)
 			if del.Run() != nil {
 				utils.CheckErr(err)
 			}
@@ -193,13 +219,34 @@ func (hb *HypeBot) validateUrl(url string) (valid bool, err error) {
 		"--match-filter",
 		"!is_live",
 		"--simulate",
-		"--verbose",
 	}
 
+	var stdout, stderr bytes.Buffer
 	cmd := exec.Command(ytdl, args...)
-	if _, err := cmd.Output(); err != nil && err.Error() != "exit status 101" {
-		log.Printf("{yt-dlp}-not_live: %v \n", err)
-		return false, errors.New("Unable to process a live video ⚠️")
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err = cmd.Run(); err != nil && err.Error() != "exit status 101" {
+		dlerr := string(bytes.Split(stderr.Bytes(), []byte(":"))[2])
+		log.Printf("{yt-dlp}-not_live: %v -%v \n", err, dlerr)
+		return false, errors.New(fmt.Sprint(dlerr, ":warning:"))
+	}
+
+	if bytes.Contains(stdout.Bytes(), []byte("!is_live")) {
+		return false, errors.New("Unable to process a live video :warning:")
+	}
+
+    args[6] = "duration < 600"
+	cmd = exec.Command(ytdl, args...)
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err = cmd.Run(); err != nil && err.Error() != "exit status 101" {
+		dlerr := string(bytes.Split(stderr.Bytes(), []byte(":"))[2])
+		log.Printf("{yt-dlp}-not_live: %v -%v \n", err, dlerr)
+		return false, errors.New(fmt.Sprint(dlerr, ":warning:"))
+	}
+
+	if bytes.Contains(stdout.Bytes(), []byte("duration < 600")) {
+		return false, errors.New("Video must not exceed 10 minutes :warning:")
 	}
 
 	return true, nil
