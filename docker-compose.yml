@@ -10,7 +10,9 @@ services:
         TOKEN: ${TOKEN}
       dockerfile: ./docker/hypebot/Dockerfile
     logging:
-      driver: journald
+      driver: syslog
+      options:
+        tag: "{{.Name}}"
     restart: unless-stopped
     networks: ["caddy_default"]
     environment:
@@ -26,7 +28,9 @@ services:
       context: .
       dockerfile: ./docker/hypeserver/Dockerfile
     logging:
-      driver: journald
+      driver: syslog
+      options:
+        tag: "{{.Name}}"
     restart: unless-stopped
     networks: ["caddy_default"]
     ports:
