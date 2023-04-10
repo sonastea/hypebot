@@ -84,4 +84,6 @@ jobs:
           key: ${{ secrets.VPS_PRIVATE_KEY }}
           script: |
             cd $(pwd)/hypebot
+            git restore .
+            git pull
             docker compose up -d --force-recreate --pull always
