@@ -2,6 +2,7 @@ package hypeserver
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -10,6 +11,9 @@ import (
 	"strconv"
 	"syscall"
 	"time"
+
+	"github.com/sonastea/hypebot/internal/pkg/database"
+	"github.com/sonastea/hypebot/internal/utils"
 )
 
 type HypeServer struct {
@@ -18,9 +22,14 @@ type HypeServer struct {
 	users   uint64
 }
 
-var totalServers, totalUsers uint64
+var db *sql.DB
+var TotalServers, TotalUsers uint64
 
 func NewHypeServer() *HypeServer {
+	var err error
+	db, err = database.GetDBConn()
+	utils.CheckErrFatal(err)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/stats", stats)
 
@@ -64,16 +73,14 @@ func stats(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w, r)
 
 	data := make(map[string]string)
-	totalServers, totalUsers = GetStats()
+	TotalServers, TotalUsers = GetStats()
 
-	data["servers"] = strconv.FormatUint(totalServers, 10)
-	data["users"] = strconv.FormatUint(totalUsers, 10)
+	data["servers"] = strconv.FormatUint(TotalServers, 10)
+	data["users"] = strconv.FormatUint(TotalUsers, 10)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(data)
-
-	return
 }
 
 func enableCors(w *http.ResponseWriter, r *http.Request) {

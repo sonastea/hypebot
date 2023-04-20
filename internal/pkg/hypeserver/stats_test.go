@@ -20,7 +20,7 @@ func MockStats(w http.ResponseWriter, r *http.Request) {
 	data := make(map[string]string)
 
 	switch r.URL.Query().Get("test") {
-	case "Get Cached Stats from DB":
+	case "Get cached stats from db":
 		{
 			servers = 68
 			users = 419
@@ -36,31 +36,29 @@ func MockStats(w http.ResponseWriter, r *http.Request) {
 }
 
 func TestGetStats(t *testing.T) {
-	tests := []struct {
-		name        string
-		req         *http.Request
+	tests := map[string]struct {
 		wantServers string
 		wantUsers   string
 	}{
-		{
-
-			name:        "Get Stats from DB",
+		"Get stats from db": {
 			wantServers: "69",
 			wantUsers:   "420",
 		},
-		{
+		"Get cached stats from db": {
 
-			name:        "Get Cached Stats from DB",
 			wantServers: "68",
 			wantUsers:   "419",
 		},
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for test_name, test := range tests {
+		test_name := test_name
+		test := test
+		t.Run(test_name, func(t *testing.T) {
+			t.Parallel()
 			req := httptest.NewRequest("GET", "/stats", nil)
 			q := req.URL.Query()
-			q.Add("test", test.name)
+			q.Add("test", test_name)
 			req.URL.RawQuery = q.Encode()
 
 			w := httptest.NewRecorder()
@@ -74,6 +72,7 @@ func TestGetStats(t *testing.T) {
 			assert.Equal(t, http.StatusOK, res.StatusCode)
 			assert.Equal(t, test.wantServers, data["servers"])
 			assert.Equal(t, test.wantUsers, data["users"])
+
 		})
 	}
 }
