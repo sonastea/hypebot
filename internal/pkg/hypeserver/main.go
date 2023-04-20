@@ -10,8 +10,6 @@ import (
 	"strconv"
 	"syscall"
 	"time"
-
-	"github.com/sonastea/hypebot/internal/pkg/hypebot"
 )
 
 type HypeServer struct {
@@ -66,7 +64,7 @@ func stats(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w, r)
 
 	data := make(map[string]string)
-	totalServers, totalUsers = hypebot.GetStats()
+	totalServers, totalUsers = GetStats()
 
 	data["servers"] = strconv.FormatUint(totalServers, 10)
 	data["users"] = strconv.FormatUint(totalUsers, 10)

@@ -1,4 +1,4 @@
-package themesongs
+package themesong
 
 import (
 	"database/sql"

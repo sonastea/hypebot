@@ -1,9 +1,10 @@
-package users
+package user
 
 import (
 	"database/sql"
 	"log"
 
+	"github.com/sonastea/hypebot/internal/pkg/hypebot/models"
 	"github.com/sonastea/hypebot/internal/utils"
 )
 
@@ -17,7 +18,7 @@ func FindUser(db *sql.DB, guild_id string, user_id string) bool {
 	return true
 }
 
-func AddUser(db *sql.DB, user User) {
+func AddUser(db *sql.DB, user models.User) {
 	stmt, err := db.Prepare("INSERT OR IGNORE INTO User (guild_id, UID) VALUES (?,?);")
 	utils.CheckErr(err)
 

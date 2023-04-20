@@ -10,8 +10,8 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 
-	"github.com/sonastea/hypebot/internal/pkg/datastore"
-	"github.com/sonastea/hypebot/internal/pkg/datastore/guilds"
+	"github.com/sonastea/hypebot/internal/pkg/database"
+	"github.com/sonastea/hypebot/internal/pkg/datastore/guild"
 	"github.com/sonastea/hypebot/internal/utils"
 )
 
@@ -27,7 +27,7 @@ type HypeBot struct {
 	s  *discordgo.Session
 	db *sql.DB
 
-	guildStore guilds.Store
+	guildStore guild.Store
 }
 
 func init() {
@@ -44,20 +44,20 @@ func NewHypeBot() (hb *HypeBot, err error) {
 	dg, err := discordgo.New("Bot " + Token)
 	utils.CheckErrFatal(err)
 
-	db, err := datastore.GetDBConn()
+	db, err := database.GetDBConn()
 	utils.CheckErrFatal(err)
 
 	return &HypeBot{
 		s:          dg,
 		db:         db,
-		guildStore: guilds.NewGuildStore(),
+		guildStore: guild.NewGuildStore(),
 	}, nil
 }
 
 func (hb *HypeBot) initGuildStore() {
-	for _, guild := range hb.s.State.Guilds {
-		guilds.AddGuild(hb.db, guild.ID)
-		hb.guildStore[guild.ID] = guilds.GetGuild(hb.db, guild.ID)
+	for _, g := range hb.s.State.Guilds {
+		guild.AddGuild(hb.db, g.ID)
+		hb.guildStore[g.ID] = guild.GetGuild(hb.db, g.ID)
 	}
 }
 

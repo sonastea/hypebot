@@ -1,16 +1,17 @@
-package guilds
+package guild
 
 import (
 	"database/sql"
 	"log"
 
+	"github.com/sonastea/hypebot/internal/pkg/hypebot/models"
 	"github.com/sonastea/hypebot/internal/utils"
 )
 
-type Store map[string]*Guild
+type Store map[string]*models.Guild
 
 func NewGuildStore() Store {
-	return make(map[string]*Guild)
+	return make(map[string]*models.Guild)
 }
 
 func AddGuild(db *sql.DB, guild_id string) {
@@ -50,17 +51,17 @@ func FindGuild(db *sql.DB, guild_id string) (bool, error) {
 	return false, nil
 }
 
-func GetGuild(db *sql.DB, guild_id string) *Guild {
-	res, err := db.Query("SELECT * from Guild Where Guild.UID = ?;", guild_id)
+func GetGuild(db *sql.DB, guild_id string) *models.Guild {
+	res, err := db.Query("SELECT UID, Active, CreatedAt, UpdatedAt from Guild Where Guild.UID = ?;", guild_id)
 	utils.CheckErr(err)
 	defer res.Close()
 
-	var guild = &Guild{
+	var guild = &models.Guild{
 		VCS: make(map[string][]string),
 	}
 
 	for res.Next() {
-		err = res.Scan(&guild.id, &guild.UID, &guild.Active, &guild.CreatedAt, &guild.UpdatedAt)
+		err = res.Scan(&guild.UID, &guild.Active, &guild.CreatedAt, &guild.UpdatedAt)
 		utils.CheckErr(err)
 	}
 

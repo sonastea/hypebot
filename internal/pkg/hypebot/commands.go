@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/sonastea/hypebot/internal/pkg/datastore/users"
+	"github.com/sonastea/hypebot/internal/pkg/datastore/user"
 )
 
 var (
@@ -55,7 +55,7 @@ func (hb *HypeBot) clearCommand(s *discordgo.Session, i *discordgo.InteractionCr
 		},
 	})
 
-	exists := users.FindUser(hb.db, i.GuildID, i.Member.User.ID)
+	exists := user.FindUser(hb.db, i.GuildID, i.Member.User.ID)
 
 	if !exists {
 		msg = "You have not set a themesong with HypeBot."

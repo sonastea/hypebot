@@ -16,8 +16,8 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/google/uuid"
 	"github.com/robrotheram/dca"
-	"github.com/sonastea/hypebot/internal/pkg/datastore/themesongs"
-	"github.com/sonastea/hypebot/internal/pkg/datastore/users"
+	"github.com/sonastea/hypebot/internal/pkg/datastore/themesong"
+	"github.com/sonastea/hypebot/internal/pkg/datastore/user"
 	"github.com/sonastea/hypebot/internal/utils"
 )
 
@@ -30,18 +30,18 @@ type VideoMetaData struct {
 }
 
 func (hb *HypeBot) setThemesong(file_path string, guild_id string, user_id string) string {
-	if filePath, ok := users.GetThemesong(hb.db, guild_id, user_id); ok {
+	if filePath, ok := user.GetThemesong(hb.db, guild_id, user_id); ok {
 		// Delete old themesong
 		del := exec.Command("rm", filePath)
 		del.Run()
-		return themesongs.UpdateThemesong(hb.db, file_path, guild_id, user_id)
+		return themesong.UpdateThemesong(hb.db, file_path, guild_id, user_id)
 	}
 
-	return themesongs.SetThemesong(hb.db, file_path, guild_id, user_id)
+	return themesong.SetThemesong(hb.db, file_path, guild_id, user_id)
 }
 
 func (hb *HypeBot) removeThemesong(guild_id string, user_id string) string {
-	return themesongs.RemoveThemesong(hb.db, guild_id, user_id)
+	return themesong.RemoveThemesong(hb.db, guild_id, user_id)
 }
 
 func (hb *HypeBot) playThemesong(e *discordgo.VoiceStateUpdate, channel_id string, vc *discordgo.VoiceConnection) (err error) {

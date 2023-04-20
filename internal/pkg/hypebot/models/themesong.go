@@ -1,4 +1,4 @@
-package themesongs
+package models
 
 type Themesong struct {
 	id       int
