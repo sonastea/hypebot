@@ -1,10 +1,16 @@
 package main
 
 import (
-	"github.com/sonastea/hypebot/internal/pkg/hypeserver"
+	"log"
+
+	"github.com/sonastea/hypebot/internal/hypeserver"
 )
 
 func main() {
-	hs := hypeserver.NewHypeServer()
+	hs, err := hypeserver.NewHypeServer()
+	if err != nil {
+		log.Fatalln(err)
+	}
+
 	hs.Run()
 }

@@ -1,21 +1,6 @@
 package utils
 
-import (
-	"encoding/json"
-	"log"
-)
-
-func CheckErrFatal(err error) {
-	if err != nil {
-		log.Fatalln(err)
-	}
-}
-
-func CheckErr(err error) {
-	if err != nil {
-		log.Println(err)
-	}
-}
+import "encoding/json"
 
 func PrettyStruct(data interface{}) (string, error) {
 	val, err := json.MarshalIndent(data, "", "  ")
