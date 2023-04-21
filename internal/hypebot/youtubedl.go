@@ -18,7 +18,6 @@ import (
 	"github.com/robrotheram/dca"
 	"github.com/sonastea/hypebot/internal/datastore/themesong"
 	"github.com/sonastea/hypebot/internal/datastore/user"
-	"github.com/sonastea/hypebot/internal/utils"
 )
 
 type VideoMetaData struct {
@@ -47,7 +46,9 @@ func (hb *HypeBot) removeThemesong(guild_id string, user_id string) string {
 func (hb *HypeBot) playThemesong(e *discordgo.VoiceStateUpdate, channel_id string, vc *discordgo.VoiceConnection) (err error) {
 	for len(hb.guildStore[e.VoiceState.GuildID].VCS[channel_id]) > 0 {
 		file, err := os.Open(hb.guildStore[e.VoiceState.GuildID].VCS[channel_id][0])
-		utils.CheckErr(err)
+		if err != nil {
+			log.Println(err)
+		}
 		defer file.Close()
 
 		decoder := dca.NewDecoder(file)
@@ -68,7 +69,9 @@ func (hb *HypeBot) playThemesong(e *discordgo.VoiceStateUpdate, channel_id strin
 		}
 
 		err = vc.Speaking(false)
-		utils.CheckErr(err)
+		if err != nil {
+			log.Println(err)
+		}
 
 		if len(hb.guildStore[e.GuildID].VCS[channel_id]) > 1 {
 			hb.guildStore[e.GuildID].VCS[channel_id] = hb.guildStore[e.GuildID].VCS[channel_id][1:]
@@ -98,7 +101,7 @@ func (hb *HypeBot) downloadVideo(url string, start_time string, duration string)
 
 	ytdl, err := exec.LookPath("yt-dlp")
 	if err != nil {
-		utils.CheckErrFatal(err)
+		return "", err
 	} else {
 		dir, err := os.Getwd()
 		if err != nil {
@@ -161,7 +164,7 @@ func (hb *HypeBot) downloadVideo(url string, start_time string, duration string)
 
 			fmpg, err := exec.LookPath("ffmpeg")
 			if err != nil {
-				utils.CheckErrFatal(err)
+				return "", err
 			}
 			args := []string{
 				"-i",
@@ -184,17 +187,19 @@ func (hb *HypeBot) downloadVideo(url string, start_time string, duration string)
 			defer encodeSession.Cleanup()
 
 			dcaFile, err := os.Create(songsDir + fileName + ".dca")
-			utils.CheckErr(err)
+			if err != nil {
+				log.Println(err)
+			}
 			io.Copy(dcaFile, encodeSession)
 
 			del := exec.Command("rm", opusFile)
 			if del.Run() != nil {
-				utils.CheckErr(err)
+				log.Println(err)
 			}
 
 			del = exec.Command("rm", opusFileComp)
 			if del.Run() != nil {
-				utils.CheckErr(err)
+				log.Println(err)
 			}
 
 			log.Printf("Created theme song: %v - %v \n", videoMetaData.Title, fileName)
@@ -207,7 +212,7 @@ func (hb *HypeBot) downloadVideo(url string, start_time string, duration string)
 func (hb *HypeBot) validateUrl(url string) (valid bool, err error) {
 	ytdl, err := exec.LookPath("yt-dlp")
 	if err != nil {
-		utils.CheckErrFatal(err)
+		return false, err
 	}
 
 	args := []string{
@@ -235,7 +240,7 @@ func (hb *HypeBot) validateUrl(url string) (valid bool, err error) {
 		return false, errors.New("Unable to process a live video :warning:")
 	}
 
-    args[6] = "duration < 600"
+	args[6] = "duration < 600"
 	cmd = exec.Command(ytdl, args...)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr

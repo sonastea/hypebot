@@ -5,7 +5,6 @@ import (
 	"log"
 
 	"github.com/sonastea/hypebot/internal/hypebot/models"
-	"github.com/sonastea/hypebot/internal/utils"
 )
 
 func FindUser(db *sql.DB, guild_id string, user_id string) bool {
@@ -20,13 +19,19 @@ func FindUser(db *sql.DB, guild_id string, user_id string) bool {
 
 func AddUser(db *sql.DB, user models.User) {
 	stmt, err := db.Prepare("INSERT OR IGNORE INTO User (guild_id, UID) VALUES (?,?);")
-	utils.CheckErr(err)
+	if err != nil {
+		log.Println(err)
+	}
 
 	res, err := stmt.Exec(user.Guild_ID, user.UID)
-	utils.CheckErr(err)
+	if err != nil {
+		log.Println(err)
+	}
 
 	rows, err := res.RowsAffected()
-	utils.CheckErr(err)
+	if err != nil {
+		log.Println(err)
+	}
 
 	defer stmt.Close()
 
@@ -39,14 +44,18 @@ func AddUser(db *sql.DB, user models.User) {
 func GetThemesong(db *sql.DB, guild_id string, user_id string) (filePath string, ok bool) {
 	res, err := db.Query("SELECT Filepath from Themesong Where Themesong.guild_id = ? AND Themesong.user_id = ?;",
 		guild_id, user_id)
-	utils.CheckErr(err)
+	if err != nil {
+		log.Println(err)
+	}
 	defer res.Close()
 
 	var filepath string
 
 	for res.Next() {
 		err = res.Scan(&filepath)
-		utils.CheckErr(err)
+		if err != nil {
+			log.Println(err)
+		}
 		return filepath, true
 	}
 
@@ -59,7 +68,7 @@ func GetTotalServed(db *sql.DB) (uint64, bool) {
 	err := db.QueryRow("SELECT COUNT(*) FROM User;").Scan(&totalUsers)
 	switch {
 	case err != nil:
-		utils.CheckErr(err)
+		log.Println(err)
 		return 0, false
 	default:
 		return totalUsers, true

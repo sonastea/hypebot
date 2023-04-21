@@ -1,17 +1,22 @@
 package main
 
 import (
+	"log"
+
 	"github.com/sonastea/hypebot/internal/database"
 	"github.com/sonastea/hypebot/internal/hypebot"
-	"github.com/sonastea/hypebot/internal/utils"
 )
 
 func main() {
-    db, err := database.GetDBConn()
-    utils.CheckErrFatal(err)
+	db, err := database.GetDBConn()
+	if err != nil {
+		log.Fatalln(err)
+	}
 
 	b, err := hypebot.NewHypeBot(db)
-	utils.CheckErrFatal(err)
+	if err != nil {
+		log.Fatalln(err)
+	}
 
 	b.Run()
 }

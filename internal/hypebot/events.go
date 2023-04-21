@@ -8,7 +8,6 @@ import (
 	"github.com/sonastea/hypebot/internal/datastore/guild"
 	"github.com/sonastea/hypebot/internal/datastore/user"
 	"github.com/sonastea/hypebot/internal/hypebot/models"
-	"github.com/sonastea/hypebot/internal/utils"
 )
 
 func (hb *HypeBot) listenVoiceStateUpdate(s *discordgo.Session, e *discordgo.VoiceStateUpdate) {
@@ -31,7 +30,7 @@ func (hb *HypeBot) listenVoiceStateUpdate(s *discordgo.Session, e *discordgo.Voi
 
 		vs, err := s.State.VoiceState(e.GuildID, BotID)
 		if err != nil {
-			utils.CheckErr(nil)
+			log.Println(err)
 		}
 
 		if hb.guildStore[e.GuildID].Playing && vs.ChannelID != e.ChannelID {
@@ -46,7 +45,7 @@ func (hb *HypeBot) listenVoiceStateUpdate(s *discordgo.Session, e *discordgo.Voi
 			if !hb.guildStore[e.GuildID].Playing {
 				vc, err = hb.s.ChannelVoiceJoin(e.VoiceState.GuildID, e.ChannelID, false, false)
 				if err != nil {
-					utils.CheckErr(err)
+					log.Println(err)
 				}
 			}
 
@@ -57,7 +56,7 @@ func (hb *HypeBot) listenVoiceStateUpdate(s *discordgo.Session, e *discordgo.Voi
 			hb.guildStore[e.GuildID].Playing = true
 			err = hb.playThemesong(e, e.ChannelID, vc)
 			if err != nil {
-				utils.CheckErr(err)
+				log.Println(err)
 			}
 		}
 	}

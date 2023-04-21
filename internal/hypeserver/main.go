@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/sonastea/hypebot/internal/database"
-	"github.com/sonastea/hypebot/internal/utils"
 )
 
 type HypeServer struct {
@@ -25,10 +24,12 @@ type HypeServer struct {
 var db *sql.DB
 var TotalServers, TotalUsers uint64
 
-func NewHypeServer() *HypeServer {
+func NewHypeServer() (*HypeServer, error) {
 	var err error
 	db, err = database.GetDBConn()
-	utils.CheckErrFatal(err)
+	if err != nil {
+		return nil, err
+	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/stats", stats)
@@ -40,7 +41,7 @@ func NewHypeServer() *HypeServer {
 		},
 	}
 
-	return s
+	return s, nil
 }
 
 func (hs *HypeServer) Run() {

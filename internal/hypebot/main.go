@@ -10,7 +10,6 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/sonastea/hypebot/internal/datastore/guild"
-	"github.com/sonastea/hypebot/internal/utils"
 )
 
 // Variables used for command line parameters
@@ -40,7 +39,9 @@ func NewHypeBot(db *sql.DB) (hb *HypeBot, err error) {
 
 	// Create discordgo session using a bot token
 	dg, err := discordgo.New("Bot " + Token)
-	utils.CheckErrFatal(err)
+    if err != nil {
+        return nil, err
+    }
 
 	return &HypeBot{
 		s:          dg,
