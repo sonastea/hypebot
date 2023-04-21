@@ -4,7 +4,6 @@ import (
 	"database/sql"
 
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/sonastea/hypebot/internal/utils"
 )
 
 const create string = `
@@ -38,18 +37,16 @@ const create string = `
 
 var conn *sql.DB
 
-func init() {
-    var err error
-
-    conn, err = sql.Open("sqlite3", "file:hypebase.db?mode=rwc&journal_mode=WAL")
-	utils.CheckErr(err)
+func GetDBConn() (db *sql.DB, err error) {
+	conn, err = sql.Open("sqlite3", "file:hypebase.db?mode=rwc&journal_mode=WAL")
+	if err != nil {
+        return nil, err
+	}
 
 	// Setup schema
-	if _, err := conn.Exec(create); err != nil {
-        utils.CheckErrFatal(err)
+	if _, err = conn.Exec(create); err != nil {
+        return nil, err
 	}
-}
 
-func GetDBConn() (db *sql.DB, err error) {
 	return conn, nil
 }

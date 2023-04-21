@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"log"
 
-	"github.com/sonastea/hypebot/internal/pkg/hypebot/models"
+	"github.com/sonastea/hypebot/internal/hypebot/models"
 	"github.com/sonastea/hypebot/internal/utils"
 )
 

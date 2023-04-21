@@ -16,8 +16,8 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/google/uuid"
 	"github.com/robrotheram/dca"
-	"github.com/sonastea/hypebot/internal/pkg/datastore/themesong"
-	"github.com/sonastea/hypebot/internal/pkg/datastore/user"
+	"github.com/sonastea/hypebot/internal/datastore/themesong"
+	"github.com/sonastea/hypebot/internal/datastore/user"
 	"github.com/sonastea/hypebot/internal/utils"
 )
 

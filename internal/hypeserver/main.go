@@ -12,7 +12,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/sonastea/hypebot/internal/pkg/database"
+	"github.com/sonastea/hypebot/internal/database"
 	"github.com/sonastea/hypebot/internal/utils"
 )
 

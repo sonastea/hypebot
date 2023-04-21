@@ -9,9 +9,7 @@ import (
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
-
-	"github.com/sonastea/hypebot/internal/pkg/database"
-	"github.com/sonastea/hypebot/internal/pkg/datastore/guild"
+	"github.com/sonastea/hypebot/internal/datastore/guild"
 	"github.com/sonastea/hypebot/internal/utils"
 )
 
@@ -37,14 +35,11 @@ func init() {
 	flag.BoolVar(&RemoveCommands, "rmcmd", true, "Remove all commands after shutdowning or not")
 }
 
-func NewHypeBot() (hb *HypeBot, err error) {
+func NewHypeBot(db *sql.DB) (hb *HypeBot, err error) {
 	flag.Parse()
 
 	// Create discordgo session using a bot token
 	dg, err := discordgo.New("Bot " + Token)
-	utils.CheckErrFatal(err)
-
-	db, err := database.GetDBConn()
 	utils.CheckErrFatal(err)
 
 	return &HypeBot{

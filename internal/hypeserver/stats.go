@@ -1,8 +1,8 @@
 package hypeserver
 
 import (
-	"github.com/sonastea/hypebot/internal/pkg/datastore/guild"
-	"github.com/sonastea/hypebot/internal/pkg/datastore/user"
+	"github.com/sonastea/hypebot/internal/datastore/guild"
+	"github.com/sonastea/hypebot/internal/datastore/user"
 )
 
 func GetTotalUsers() uint64 {

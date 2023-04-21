@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/sonastea/hypebot/internal/pkg/datastore/user"
+	"github.com/sonastea/hypebot/internal/datastore/user"
 )
 
 var (

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/sonastea/hypebot/internal/pkg/hypeserver"
+	"github.com/sonastea/hypebot/internal/hypeserver"
 )
 
 func main() {

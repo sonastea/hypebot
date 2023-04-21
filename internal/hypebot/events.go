@@ -5,9 +5,9 @@ import (
 	"log"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/sonastea/hypebot/internal/pkg/datastore/guild"
-	"github.com/sonastea/hypebot/internal/pkg/datastore/user"
-	"github.com/sonastea/hypebot/internal/pkg/hypebot/models"
+	"github.com/sonastea/hypebot/internal/datastore/guild"
+	"github.com/sonastea/hypebot/internal/datastore/user"
+	"github.com/sonastea/hypebot/internal/hypebot/models"
 	"github.com/sonastea/hypebot/internal/utils"
 )
 
