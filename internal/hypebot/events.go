@@ -17,7 +17,7 @@ func (hb *HypeBot) listenVoiceStateUpdate(s *discordgo.Session, e *discordgo.Voi
 
 	// User enters a voice channel
 	if e.BeforeUpdate == nil {
-		fmt.Printf("%+v joined channel %+v \n", e.VoiceState.UserID, e.ChannelID)
+        fmt.Printf("%s:%s joined channel %s \n", e.Member.User.Username, e.VoiceState.UserID, e.ChannelID)
 		// If user doesn't exist, add them to the database
 		exists := user.FindUser(hb.db, e.GuildID, e.VoiceState.UserID)
 		if !exists {
@@ -28,11 +28,7 @@ func (hb *HypeBot) listenVoiceStateUpdate(s *discordgo.Session, e *discordgo.Voi
 			user.AddUser(hb.db, *newUser)
 		}
 
-		vs, err := s.State.VoiceState(e.GuildID, BotID)
-		if err != nil {
-			log.Println(err)
-		}
-
+		vs, _ := s.State.VoiceState(e.GuildID, BotID)
 		if hb.guildStore[e.GuildID].Playing && vs.ChannelID != e.ChannelID {
 			return
 		}
@@ -54,9 +50,10 @@ func (hb *HypeBot) listenVoiceStateUpdate(s *discordgo.Session, e *discordgo.Voi
 			}
 
 			hb.guildStore[e.GuildID].Playing = true
-			err = hb.playThemesong(e, e.ChannelID, vc)
+            err = hb.playThemesong(e, vc)
 			if err != nil {
 				log.Println(err)
+				vc.Disconnect()
 			}
 		}
 	}
@@ -71,7 +68,7 @@ func (hb *HypeBot) listenOnJoinServer(s *discordgo.Session, e *discordgo.GuildCr
 	guild.AddGuild(hb.db, e.ID)
 	hb.guildStore[e.ID] = guild.GetGuild(hb.db, e.ID)
 
-	log.Printf("Joined server `%v`:%v \n", e.Guild.Name, e.ID)
+	log.Printf("Joined server `%s`:%s \n", e.Guild.Name, e.ID)
 }
 
 func (hb *HypeBot) listenOnLeaveServer(s *discordgo.Session, e *discordgo.GuildDelete) {
@@ -79,6 +76,6 @@ func (hb *HypeBot) listenOnLeaveServer(s *discordgo.Session, e *discordgo.GuildD
 	if found {
 		guild.RemoveGuild(hb.db, g.UID)
 		delete(hb.guildStore, g.UID)
-		log.Printf("%v removed HypeBot. \n", g.UID)
+		log.Printf("%s removed HypeBot. \n", g.UID)
 	}
 }

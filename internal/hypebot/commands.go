@@ -2,6 +2,7 @@ package hypebot
 
 import (
 	"fmt"
+	"log"
 	"regexp"
 	"strconv"
 	"time"
@@ -96,6 +97,7 @@ func (hb *HypeBot) setCommand(s *discordgo.Session, i *discordgo.InteractionCrea
 	opts := i.ApplicationCommandData().Options
 
 	url, start, duration, err := sanitizeSetCommand(opts)
+    log.Printf("%s:%s set %s • [%s, %s, %s] \n", i.Member.User.Username,i.Member.User.ID, i.GuildID, url, start, duration)
 	if err != nil {
 		msg = err.Error()
 		_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{

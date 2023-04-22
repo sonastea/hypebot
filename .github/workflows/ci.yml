@@ -86,4 +86,5 @@ jobs:
             cd $(pwd)/hypebot
             git restore .
             git pull
+            docker compose down --rmi
             docker compose up -d --force-recreate --pull always

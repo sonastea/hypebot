@@ -43,9 +43,9 @@ func (hb *HypeBot) removeThemesong(guild_id string, user_id string) string {
 	return themesong.RemoveThemesong(hb.db, guild_id, user_id)
 }
 
-func (hb *HypeBot) playThemesong(e *discordgo.VoiceStateUpdate, channel_id string, vc *discordgo.VoiceConnection) (err error) {
-	for len(hb.guildStore[e.VoiceState.GuildID].VCS[channel_id]) > 0 {
-		file, err := os.Open(hb.guildStore[e.VoiceState.GuildID].VCS[channel_id][0])
+func (hb *HypeBot) playThemesong(e *discordgo.VoiceStateUpdate, vc *discordgo.VoiceConnection) (err error) {
+	for len(hb.guildStore[e.VoiceState.GuildID].VCS[e.ChannelID]) > 0 {
+		file, err := os.Open(hb.guildStore[e.VoiceState.GuildID].VCS[e.ChannelID][0])
 		if err != nil {
 			log.Println(err)
 		}
@@ -73,11 +73,11 @@ func (hb *HypeBot) playThemesong(e *discordgo.VoiceStateUpdate, channel_id strin
 			log.Println(err)
 		}
 
-		if len(hb.guildStore[e.GuildID].VCS[channel_id]) > 1 {
-			hb.guildStore[e.GuildID].VCS[channel_id] = hb.guildStore[e.GuildID].VCS[channel_id][1:]
-		} else if len(hb.guildStore[e.GuildID].VCS[channel_id]) == 1 {
+		if len(hb.guildStore[e.GuildID].VCS[e.ChannelID]) > 1 {
+			hb.guildStore[e.GuildID].VCS[e.ChannelID] = hb.guildStore[e.GuildID].VCS[e.ChannelID][1:]
+		} else if len(hb.guildStore[e.GuildID].VCS[e.ChannelID]) == 1 {
 			time.Sleep(1500 * time.Millisecond)
-			hb.guildStore[e.GuildID].VCS[channel_id] = hb.guildStore[e.VoiceState.GuildID].VCS[channel_id][:0]
+			hb.guildStore[e.GuildID].VCS[e.ChannelID] = hb.guildStore[e.VoiceState.GuildID].VCS[e.ChannelID][:0]
 			hb.guildStore[e.GuildID].Playing = false
 			vc.Disconnect()
 		}
@@ -202,7 +202,7 @@ func (hb *HypeBot) downloadVideo(url string, start_time string, duration string)
 				log.Println(err)
 			}
 
-			log.Printf("Created theme song: %v - %v \n", videoMetaData.Title, fileName)
+			log.Printf("Created theme song: %v • %v.dca \n", videoMetaData.Title, fileName)
 		}
 	}
 
