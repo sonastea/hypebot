@@ -6,7 +6,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-const create string = `
+const Schema string = `
     CREATE TABLE IF NOT EXISTS Guild (
     "id" INTEGER,
     "UID" TEXT NOT NULL UNIQUE,
@@ -44,7 +44,7 @@ func GetDBConn() (db *sql.DB, err error) {
 	}
 
 	// Setup schema
-	if _, err = conn.Exec(create); err != nil {
+	if _, err = conn.Exec(Schema); err != nil {
         return nil, err
 	}
 

@@ -18,5 +18,12 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	b.Run()
+	botChan := b.Run()
+	if botChan == nil {
+		log.Fatal()
+	}
+
+	for range botChan {
+		b.Stop(botChan)
+	}
 }
