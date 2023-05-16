@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/bwmarrin/discordgo v0.27.1
 	github.com/google/uuid v1.3.0
-	github.com/robrotheram/dca v0.0.0-20230207201134-9204c71f99b8
+	github.com/robrotheram/dca v0.0.0-20230514122614-8e74eaffad31
 	github.com/stretchr/testify v1.8.2
 )
 
@@ -19,6 +19,6 @@ require (
 require (
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/mattn/go-sqlite3 v1.14.16
-	golang.org/x/crypto v0.8.0 // indirect
-	golang.org/x/sys v0.7.0 // indirect
+	golang.org/x/crypto v0.9.0 // indirect
+	golang.org/x/sys v0.8.0 // indirect
 )
