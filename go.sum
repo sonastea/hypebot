@@ -20,6 +20,8 @@ github.com/robrotheram/dca v0.0.0-20230207201134-9204c71f99b8 h1:LzIFgl25+TiMf7N
 github.com/robrotheram/dca v0.0.0-20230207201134-9204c71f99b8/go.mod h1:CAKuU/o1JL7dIu9891BjSg1kyxJJHVjwbEz80tdn1xE=
 github.com/robrotheram/dca v0.0.0-20230514122614-8e74eaffad31 h1:pb0RNzMz4BMU4CP1yPGKg7jmiAhpU/Py8qaTHeZPjVU=
 github.com/robrotheram/dca v0.0.0-20230514122614-8e74eaffad31/go.mod h1:CAKuU/o1JL7dIu9891BjSg1kyxJJHVjwbEz80tdn1xE=
+github.com/robrotheram/dca v0.0.0-20230525200713-5b42efd6be2c h1:07qL2gkyE7hLPeCntB+oXnIYvxEEt0eaxh8HJxJnye0=
+github.com/robrotheram/dca v0.0.0-20230525200713-5b42efd6be2c/go.mod h1:CAKuU/o1JL7dIu9891BjSg1kyxJJHVjwbEz80tdn1xE=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.4.0/go.mod h1:YvHI0jy2hoMjB+UWwv71VJQ9isScKT/TqJzVSSt89Yw=
 github.com/stretchr/objx v0.5.0/go.mod h1:Yh+to48EsGEfYuaHDzXPcE3xhTkx73EhmCGUpEOglKo=
