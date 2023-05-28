@@ -2,6 +2,7 @@ package database
 
 import (
 	"database/sql"
+	"log"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -35,18 +36,22 @@ const Schema string = `
     FOREIGN KEY ("User_ID") REFERENCES User(UID)
     );`
 
-var conn *sql.DB
+var DB *sql.DB
 
-func GetDBConn() (db *sql.DB, err error) {
-	conn, err = sql.Open("sqlite3", "file:hypebase.db?mode=rwc&journal_mode=WAL")
+func init() {
+	var err error
+
+	DB, err = sql.Open("sqlite3", "file:hypebase.db?mode=rwc&journal_mode=WAL")
 	if err != nil {
-        return nil, err
+		log.Fatalln(err)
 	}
 
 	// Setup schema
-	if _, err = conn.Exec(Schema); err != nil {
-        return nil, err
+	if _, err = DB.Exec(Schema); err != nil {
+		log.Fatalln(err)
 	}
+}
 
-	return conn, nil
+func GetDBConn() (db *sql.DB, err error) {
+	return DB, nil
 }

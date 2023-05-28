@@ -24,6 +24,9 @@ func main() {
 	}
 
 	for range botChan {
-		b.Stop(botChan)
+		err := b.Stop(botChan)
+		if err != nil {
+			log.Fatalln(err)
+		}
 	}
 }

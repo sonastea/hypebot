@@ -6,7 +6,7 @@ import (
 )
 
 func GetTotalUsers() uint64 {
-	users, success := user.GetTotalServed(db)
+	users, success := user.GetTotalServed(DB)
 	if success != true {
 		return TotalUsers
 	}
@@ -14,7 +14,7 @@ func GetTotalUsers() uint64 {
 }
 
 func GetTotalGuilds() uint64 {
-	guilds, success := guild.GetTotalServed(db)
+	guilds, success := guild.GetTotalServed(DB)
 	if success != true {
 		return TotalServers
 	}

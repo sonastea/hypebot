@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -11,8 +12,6 @@ import (
 	"strconv"
 	"syscall"
 	"time"
-
-	"github.com/sonastea/hypebot/internal/database"
 )
 
 type HypeServer struct {
@@ -21,16 +20,11 @@ type HypeServer struct {
 	users   uint64
 }
 
-var db *sql.DB
+var DB *sql.DB
 var TotalServers, TotalUsers uint64
 
-func NewHypeServer() (*HypeServer, error) {
-	var err error
-	db, err = database.GetDBConn()
-	if err != nil {
-		return nil, err
-	}
-
+func NewHypeServer(db *sql.DB) (*HypeServer, error) {
+	DB = db
 	mux := http.NewServeMux()
 	mux.HandleFunc("/stats", stats)
 
@@ -44,7 +38,7 @@ func NewHypeServer() (*HypeServer, error) {
 	return s, nil
 }
 
-func (hs *HypeServer) Run() {
+func (hs *HypeServer) Run() (context.Context, chan os.Signal) {
 	log.Println("HypeServer listening on port 3000")
 	go func() {
 		if err := hs.server.ListenAndServe(); err != http.ErrServerClosed {
@@ -52,22 +46,24 @@ func (hs *HypeServer) Run() {
 		}
 	}()
 
-	cleanup := make(chan os.Signal, 1)
-	signal.Notify(cleanup, os.Interrupt, syscall.SIGINT)
-	<-cleanup
-
-	go func() {
-		<-cleanup
-	}()
-
-	cleansedCtx, cancelShutdown := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancelShutdown := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelShutdown()
 
-	if err := hs.server.Shutdown(cleansedCtx); err != nil {
-		log.Printf("Shutdown error: %v\n", err)
-	} else {
-		log.Printf("Shutdown successful\n")
+	cleanup := make(chan os.Signal, 1)
+	signal.Notify(cleanup, os.Interrupt, syscall.SIGINT)
+	return ctx, cleanup
+}
+
+func (hs *HypeServer) Stop(ctx context.Context, sig chan os.Signal) error {
+	close(sig)
+
+	if err := hs.server.Shutdown(ctx); err != nil {
+		return fmt.Errorf("Shutdown error: %v\n", err)
 	}
+
+	log.Printf("Shutdown successful\n")
+
+	return nil
 }
 
 func stats(w http.ResponseWriter, r *http.Request) {
