@@ -89,8 +89,8 @@ func TestNewHypeBot(t *testing.T) {
 
 func TestRunAndStop(t *testing.T) {
 	botChan := hb.Run()
-	assert.NotNil(t, botChan, "unable to return os.Signal from running hypebot")
+	assert.NotNil(t, botChan, "unable to return chan os.Signal from running hypebot")
 
 	err := hb.Stop(botChan)
-    assert.Nil(t, err, "unable to shut down hypebot gracefully: %v", err)
+	assert.Nil(t, err, "unable to shut down hypebot gracefully: %v", err)
 }
