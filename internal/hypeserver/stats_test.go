@@ -12,8 +12,10 @@ import (
 )
 
 var (
-	servers uint64 = 69
-	users   uint64 = 420
+	cached_servers uint64 = 69
+	cached_users   uint64 = 420
+	servers        uint64
+	users          uint64
 )
 
 func MockStats(w http.ResponseWriter, r *http.Request) {
@@ -21,6 +23,11 @@ func MockStats(w http.ResponseWriter, r *http.Request) {
 
 	switch r.URL.Query().Get("test") {
 	case "Get cached stats from db":
+		{
+			servers = cached_servers
+			users = cached_users
+		}
+	case "Get stats from db":
 		{
 			servers = 68
 			users = 419
@@ -40,12 +47,11 @@ func TestGetStats(t *testing.T) {
 		wantServers string
 		wantUsers   string
 	}{
-		"Get stats from db": {
+		"Get cached stats from db": {
 			wantServers: "69",
 			wantUsers:   "420",
 		},
-		"Get cached stats from db": {
-
+		"Get stats from db": {
 			wantServers: "68",
 			wantUsers:   "419",
 		},
