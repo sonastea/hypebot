@@ -64,6 +64,37 @@ func TestInitGuildStore(t *testing.T) {
 	}
 }
 
+func TestHandleCommands(t *testing.T) {
+	dg, err := discordgo.New("Bot " + testBotToken)
+	if err != nil {
+		t.Fatalf("unable to create a discord session: %s", err)
+	}
+
+	hb = &HypeBot{
+		s:          dg,
+		db:         db,
+		guildStore: guild.NewGuildStore(),
+	}
+
+	err = hb.s.Open()
+	if err != nil {
+		t.Fatalf("unable opening discord websocket connection: %s", err)
+	}
+
+	hb.handleCommands()
+	expectedCommands := len(registeredCommands)
+	if cmds, err := hb.s.ApplicationCommands("1083967553887555595", ""); err == nil {
+		assert.Equalf(t, expectedCommands, len(cmds), "application commands should have %s registered commands: got %s want %s", expectedCommands, len(cmds), expectedCommands)
+	} else {
+		t.Fatalf("unable to retrieve discord commands: %s", err)
+	}
+
+	err = hb.s.Close()
+	if err != nil {
+		t.Fatalf("unable closing discord websocket connection: %s", err)
+	}
+}
+
 func TestNewHypeBot(t *testing.T) {
 	if !assert.NotEmpty(t, testBotToken) {
 		t.Fatal("env(testBotToken), TEST_TOKEN not set")
