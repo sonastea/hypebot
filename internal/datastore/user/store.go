@@ -7,7 +7,13 @@ import (
 	"github.com/sonastea/hypebot/internal/hypebot/models"
 )
 
-func FindUser(db *sql.DB, guild_id string, user_id string) bool {
+type Store struct{}
+
+func NewUserStore() *Store {
+	return new(Store)
+}
+
+func (us Store) FindUser(db *sql.DB, guild_id string, user_id string) bool {
 	res := db.QueryRow("SELECT UID from User WHERE guild_id = ? AND UID = ?;",
 		guild_id, user_id).Scan(&user_id)
 	if res != nil {
@@ -17,7 +23,7 @@ func FindUser(db *sql.DB, guild_id string, user_id string) bool {
 	return true
 }
 
-func AddUser(db *sql.DB, user models.User) {
+func (us Store) AddUser(db *sql.DB, user models.User) {
 	stmt, err := db.Prepare("INSERT OR IGNORE INTO User (guild_id, UID) VALUES (?,?);")
 	if err != nil {
 		log.Println(err)
@@ -41,7 +47,7 @@ func AddUser(db *sql.DB, user models.User) {
 	}
 }
 
-func GetThemesong(db *sql.DB, guild_id string, user_id string) (filePath string, ok bool) {
+func (us Store) GetThemesong(db *sql.DB, guild_id string, user_id string) (filePath string, ok bool) {
 	res, err := db.Query("SELECT Filepath from Themesong Where Themesong.guild_id = ? AND Themesong.user_id = ?;",
 		guild_id, user_id)
 	if err != nil {
@@ -62,7 +68,7 @@ func GetThemesong(db *sql.DB, guild_id string, user_id string) (filePath string,
 	return "", false
 }
 
-func GetTotalServed(db *sql.DB) (uint64, bool) {
+func (us Store) GetTotalServed(db *sql.DB) (uint64, bool) {
 	var totalUsers uint64
 
 	err := db.QueryRow("SELECT COUNT(*) FROM User;").Scan(&totalUsers)

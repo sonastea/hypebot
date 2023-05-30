@@ -10,6 +10,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/sonastea/hypebot/internal/datastore/guild"
+	"github.com/sonastea/hypebot/internal/datastore/user"
 )
 
 // Variables used for command line parameters
@@ -24,7 +25,10 @@ type HypeBot struct {
 	s  *discordgo.Session
 	db *sql.DB
 
-	guildStore guild.Store
+	guildCacheStore guild.CacheStore
+
+	guildStore *guild.Store
+	userStore  *user.Store
 }
 
 func init() {
@@ -39,21 +43,23 @@ func NewHypeBot(db *sql.DB) (hb *HypeBot, err error) {
 
 	// Create discordgo session using a bot token
 	dg, err := discordgo.New("Bot " + Token)
-    if err != nil {
-        return nil, err
-    }
+	if err != nil {
+		return nil, err
+	}
 
 	return &HypeBot{
-		s:          dg,
-		db:         db,
-		guildStore: guild.NewGuildStore(),
+		s:               dg,
+		db:              db,
+		guildCacheStore: guild.NewGuildCacheStore(),
+		guildStore:      guild.NewGuildStore(),
+		userStore:       user.NewUserStore(),
 	}, nil
 }
 
 func (hb *HypeBot) initGuildStore() {
 	for _, g := range hb.s.State.Guilds {
-		guild.AddGuild(hb.db, g.ID)
-		hb.guildStore[g.ID] = guild.GetGuild(hb.db, g.ID)
+		hb.guildStore.AddGuild(hb.db, g.ID)
+		hb.guildCacheStore[g.ID] = hb.guildStore.GetGuild(hb.db, g.ID)
 	}
 }
 
@@ -78,39 +84,45 @@ func (hb *HypeBot) handleCommands() {
 	}
 }
 
-func (hb *HypeBot) Run() {
-	// Cleanly close down the Discord session after recieving CTRL-C signal
-	defer func() {
-		hb.cleanup()
-	}()
-
+func (hb *HypeBot) Run() chan os.Signal {
 	// Create websocket connection to discord with the discord session
 	err := hb.s.Open()
 	if err != nil {
 		log.Println("Error opening connection:", err)
-		return
+		return nil
 	}
 	hb.s.StateEnabled = true
 
 	hb.s.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsGuilds)
 
 	hb.initGuildStore()
+	hb.handleCommands()
 
 	hb.s.AddHandler(hb.listenVoiceStateUpdate)
 	hb.s.AddHandler(hb.listenOnJoinServer)
 	hb.s.AddHandler(hb.listenOnLeaveServer)
 
-	hb.handleCommands()
-
 	log.Printf("HypeBot #%v is now running. Press CTRL-C to exit.\n", hb.s.State.User.Discriminator)
+
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
-	<-stop
+	return stop
 }
 
-func (hb *HypeBot) cleanup() {
-	hb.s.Close()
-	hb.db.Close()
+func (hb *HypeBot) Stop(sig chan os.Signal) error {
+	close(sig)
+
+	var err error
+
+	err = hb.s.Close()
+	if err != nil {
+		return err
+	}
+
+	err = hb.db.Close()
+	if err != nil {
+		return err
+	}
 
 	if RemoveCommands {
 		for _, v := range registeredCommands {
@@ -120,4 +132,8 @@ func (hb *HypeBot) cleanup() {
 			}
 		}
 	}
+
+	log.Printf("HypeBot #%v has gracefully shut down. \n", hb.s.State.User.Discriminator)
+
+	return nil
 }

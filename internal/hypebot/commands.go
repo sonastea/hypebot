@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/sonastea/hypebot/internal/datastore/user"
 )
 
 var (
@@ -56,7 +55,7 @@ func (hb *HypeBot) clearCommand(s *discordgo.Session, i *discordgo.InteractionCr
 		},
 	})
 
-	exists := user.FindUser(hb.db, i.GuildID, i.Member.User.ID)
+	exists := hb.userStore.FindUser(hb.db, i.GuildID, i.Member.User.ID)
 
 	if !exists {
 		msg = "You have not set a themesong with HypeBot."
@@ -97,7 +96,7 @@ func (hb *HypeBot) setCommand(s *discordgo.Session, i *discordgo.InteractionCrea
 	opts := i.ApplicationCommandData().Options
 
 	url, start, duration, err := sanitizeSetCommand(opts)
-    log.Printf("%s:%s set %s • [%s, %s, %s] \n", i.Member.User.Username,i.Member.User.ID, i.GuildID, url, start, duration)
+	log.Printf("%s:%s set %s • [%s, %s, %s] \n", i.Member.User.Username, i.Member.User.ID, i.GuildID, url, start, duration)
 	if err != nil {
 		msg = err.Error()
 		_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{

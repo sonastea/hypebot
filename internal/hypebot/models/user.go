@@ -14,7 +14,7 @@ type User struct {
 }
 
 type UserStore interface {
-	FindUser() bool
+	FindUser(db *sql.DB, guild_id string, user_id string) bool
 	AddUser(db *sql.DB, user User)
 	GetThemesong(db *sql.DB, guild_id string, user_id string) (filePath string, ok bool)
 	GetTotalServed(db *sql.DB) (uint64, bool)

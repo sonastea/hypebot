@@ -17,7 +17,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/robrotheram/dca"
 	"github.com/sonastea/hypebot/internal/datastore/themesong"
-	"github.com/sonastea/hypebot/internal/datastore/user"
 )
 
 type VideoMetaData struct {
@@ -29,7 +28,7 @@ type VideoMetaData struct {
 }
 
 func (hb *HypeBot) setThemesong(file_path string, guild_id string, user_id string) string {
-	if filePath, ok := user.GetThemesong(hb.db, guild_id, user_id); ok {
+	if filePath, ok := hb.userStore.GetThemesong(hb.db, guild_id, user_id); ok {
 		// Delete old themesong
 		del := exec.Command("rm", filePath)
 		del.Run()
@@ -44,8 +43,8 @@ func (hb *HypeBot) removeThemesong(guild_id string, user_id string) string {
 }
 
 func (hb *HypeBot) playThemesong(e *discordgo.VoiceStateUpdate, vc *discordgo.VoiceConnection) (err error) {
-	for len(hb.guildStore[e.VoiceState.GuildID].VCS[e.ChannelID]) > 0 {
-		file, err := os.Open(hb.guildStore[e.VoiceState.GuildID].VCS[e.ChannelID][0])
+	for len(hb.guildCacheStore[e.VoiceState.GuildID].VCS[e.ChannelID]) > 0 {
+		file, err := os.Open(hb.guildCacheStore[e.VoiceState.GuildID].VCS[e.ChannelID][0])
 		if err != nil {
 			log.Println(err)
 		}
@@ -73,12 +72,12 @@ func (hb *HypeBot) playThemesong(e *discordgo.VoiceStateUpdate, vc *discordgo.Vo
 			log.Println(err)
 		}
 
-		if len(hb.guildStore[e.GuildID].VCS[e.ChannelID]) > 1 {
-			hb.guildStore[e.GuildID].VCS[e.ChannelID] = hb.guildStore[e.GuildID].VCS[e.ChannelID][1:]
-		} else if len(hb.guildStore[e.GuildID].VCS[e.ChannelID]) == 1 {
+		if len(hb.guildCacheStore[e.GuildID].VCS[e.ChannelID]) > 1 {
+			hb.guildCacheStore[e.GuildID].VCS[e.ChannelID] = hb.guildCacheStore[e.GuildID].VCS[e.ChannelID][1:]
+		} else if len(hb.guildCacheStore[e.GuildID].VCS[e.ChannelID]) == 1 {
 			time.Sleep(1500 * time.Millisecond)
-			hb.guildStore[e.GuildID].VCS[e.ChannelID] = hb.guildStore[e.VoiceState.GuildID].VCS[e.ChannelID][:0]
-			hb.guildStore[e.GuildID].Playing = false
+			hb.guildCacheStore[e.GuildID].VCS[e.ChannelID] = hb.guildCacheStore[e.VoiceState.GuildID].VCS[e.ChannelID][:0]
+			hb.guildCacheStore[e.GuildID].Playing = false
 			vc.Disconnect()
 		}
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -12,7 +13,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/sonastea/hypebot/internal/database"
+	"github.com/sonastea/hypebot/internal/datastore/guild"
+	"github.com/sonastea/hypebot/internal/datastore/user"
 )
 
 type HypeServer struct {
@@ -21,18 +23,13 @@ type HypeServer struct {
 	users   uint64
 }
 
-var db *sql.DB
+var DB *sql.DB
 var TotalServers, TotalUsers uint64
 
-func NewHypeServer() (*HypeServer, error) {
-	var err error
-	db, err = database.GetDBConn()
-	if err != nil {
-		return nil, err
-	}
-
+func NewHypeServer(db *sql.DB, gs *guild.Store, us *user.Store) (*HypeServer, error) {
+	DB = db
 	mux := http.NewServeMux()
-	mux.HandleFunc("/stats", stats)
+	mux.Handle("/stats", stats(gs, us))
 
 	s := &HypeServer{
 		server: &http.Server{
@@ -44,7 +41,7 @@ func NewHypeServer() (*HypeServer, error) {
 	return s, nil
 }
 
-func (hs *HypeServer) Run() {
+func (hs *HypeServer) Run() (context.Context, chan os.Signal) {
 	log.Println("HypeServer listening on port 3000")
 	go func() {
 		if err := hs.server.ListenAndServe(); err != http.ErrServerClosed {
@@ -52,36 +49,41 @@ func (hs *HypeServer) Run() {
 		}
 	}()
 
-	cleanup := make(chan os.Signal, 1)
-	signal.Notify(cleanup, os.Interrupt, syscall.SIGINT)
-	<-cleanup
-
-	go func() {
-		<-cleanup
-	}()
-
-	cleansedCtx, cancelShutdown := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancelShutdown := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelShutdown()
 
-	if err := hs.server.Shutdown(cleansedCtx); err != nil {
-		log.Printf("Shutdown error: %v\n", err)
-	} else {
-		log.Printf("Shutdown successful\n")
-	}
+	cleanup := make(chan os.Signal, 1)
+	signal.Notify(cleanup, os.Interrupt, syscall.SIGINT)
+	return ctx, cleanup
 }
 
-func stats(w http.ResponseWriter, r *http.Request) {
-	enableCors(&w, r)
+func (hs *HypeServer) Stop(ctx context.Context, sig chan os.Signal) error {
+	close(sig)
 
-	data := make(map[string]string)
-	TotalServers, TotalUsers = GetStats()
+	if err := hs.server.Shutdown(ctx); err != nil {
+		return fmt.Errorf("Shutdown error: %v\n", err)
+	}
 
-	data["servers"] = strconv.FormatUint(TotalServers, 10)
-	data["users"] = strconv.FormatUint(TotalUsers, 10)
+	log.Printf("Shutdown successful\n")
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(data)
+	return nil
+}
+
+func stats(gs *guild.Store, us *user.Store) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		enableCors(&w, r)
+
+		data := make(map[string]string)
+		TotalServers, _ = gs.GetTotalServed(DB)
+		TotalUsers, _ = us.GetTotalServed(DB)
+
+		data["servers"] = strconv.FormatUint(TotalServers, 10)
+		data["users"] = strconv.FormatUint(TotalUsers, 10)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(data)
+	})
 }
 
 func enableCors(w *http.ResponseWriter, r *http.Request) {
