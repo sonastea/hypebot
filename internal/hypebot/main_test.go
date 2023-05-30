@@ -9,6 +9,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/sonastea/hypebot/internal/database"
 	"github.com/sonastea/hypebot/internal/datastore/guild"
+	"github.com/sonastea/hypebot/internal/datastore/user"
 	"github.com/sonastea/hypebot/internal/hypebot/models"
 	"github.com/stretchr/testify/assert"
 )
@@ -22,9 +23,13 @@ var (
 )
 
 type MockedHypeBot struct {
-	db         *sql.DB
-	guilds     []*discordgo.Guild
-	guildStore guild.Store
+	db     *sql.DB
+	guilds []*discordgo.Guild
+
+	guildCacheStore guild.CacheStore
+
+	guildStore *guild.Store
+	userStore  *user.Store
 }
 
 func TestMain(m *testing.M) {
@@ -42,7 +47,9 @@ func TestMain(m *testing.M) {
 				ID: "mock",
 			},
 		},
-		guildStore: make(map[string]*models.Guild),
+		guildCacheStore: make(map[string]*models.Guild),
+		guildStore:      guild.NewGuildStore(),
+		userStore:       user.NewUserStore(),
 	}
 
 	os.Exit(m.Run())
@@ -50,17 +57,17 @@ func TestMain(m *testing.M) {
 
 func (mhb *MockedHypeBot) InitGuildStore() {
 	for _, g := range mhb.guilds {
-		guild.AddGuild(mhb.db, g.ID)
-		mhb.guildStore[g.ID] = guild.GetGuild(mhb.db, g.ID)
+		mhb.guildStore.AddGuild(mhb.db, g.ID)
+		mhb.guildCacheStore[g.ID] = mhb.guildStore.GetGuild(mhb.db, g.ID)
 	}
 }
 
 func TestInitGuildStore(t *testing.T) {
 	mhb.InitGuildStore()
-	assert.Exactly(t, 1, len(mhb.guildStore), "guild store should have 1 guild")
+	assert.Exactly(t, 1, len(mhb.guildCacheStore), "guild store should have 1 guild")
 
-	for i, g := range mhb.guildStore {
-		assert.Exactly(t, g.UID, mhb.guildStore[i].UID, "guild %v from guild store does not match %v", mhb.guildStore[i].UID, g.UID)
+	for i, g := range mhb.guildCacheStore {
+		assert.Exactly(t, g.UID, mhb.guildCacheStore[i].UID, "guild %v from guild store does not match %v", mhb.guildCacheStore[i].UID, g.UID)
 	}
 }
 
@@ -71,9 +78,11 @@ func TestHandleCommands(t *testing.T) {
 	}
 
 	hb = &HypeBot{
-		s:          dg,
-		db:         db,
-		guildStore: guild.NewGuildStore(),
+		s:               dg,
+		db:              db,
+		guildCacheStore: guild.NewGuildCacheStore(),
+		guildStore:      guild.NewGuildStore(),
+		userStore:       user.NewUserStore(),
 	}
 
 	err = hb.s.Open()
@@ -110,9 +119,11 @@ func TestNewHypeBot(t *testing.T) {
 	}
 
 	hb = &HypeBot{
-		s:          dg,
-		db:         db,
-		guildStore: guild.NewGuildStore(),
+		s:               dg,
+		db:              db,
+		guildCacheStore: guild.NewGuildCacheStore(),
+		guildStore:      guild.NewGuildStore(),
+		userStore:       user.NewUserStore(),
 	}
 
 	assert.IsType(t, &HypeBot{}, hb)

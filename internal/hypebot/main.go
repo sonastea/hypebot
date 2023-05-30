@@ -10,6 +10,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/sonastea/hypebot/internal/datastore/guild"
+	"github.com/sonastea/hypebot/internal/datastore/user"
 )
 
 // Variables used for command line parameters
@@ -24,7 +25,10 @@ type HypeBot struct {
 	s  *discordgo.Session
 	db *sql.DB
 
-	guildStore guild.Store
+	guildCacheStore guild.CacheStore
+
+	guildStore *guild.Store
+	userStore  *user.Store
 }
 
 func init() {
@@ -44,16 +48,18 @@ func NewHypeBot(db *sql.DB) (hb *HypeBot, err error) {
 	}
 
 	return &HypeBot{
-		s:          dg,
-		db:         db,
-		guildStore: guild.NewGuildStore(),
+		s:               dg,
+		db:              db,
+		guildCacheStore: guild.NewGuildCacheStore(),
+		guildStore:      guild.NewGuildStore(),
+		userStore:       user.NewUserStore(),
 	}, nil
 }
 
 func (hb *HypeBot) initGuildStore() {
 	for _, g := range hb.s.State.Guilds {
-		guild.AddGuild(hb.db, g.ID)
-		hb.guildStore[g.ID] = guild.GetGuild(hb.db, g.ID)
+		hb.guildStore.AddGuild(hb.db, g.ID)
+		hb.guildCacheStore[g.ID] = hb.guildStore.GetGuild(hb.db, g.ID)
 	}
 }
 

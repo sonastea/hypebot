@@ -9,6 +9,8 @@ import (
 	"testing"
 
 	"github.com/sonastea/hypebot/internal/database"
+	"github.com/sonastea/hypebot/internal/datastore/guild"
+	"github.com/sonastea/hypebot/internal/datastore/user"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -29,7 +31,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestNewHypeServer(t *testing.T) {
-	hs, err = NewHypeServer(DB)
+	hs, err = NewHypeServer(DB, guild.NewGuildStore(), user.NewUserStore())
 	if err != nil {
 		t.Fatalf("unable to create hypeserver: %s", err)
 	}
@@ -54,8 +56,7 @@ func TestStats(t *testing.T) {
 	}
 
 	w := httptest.NewRecorder()
-	handler := http.HandlerFunc(stats)
-	handler.ServeHTTP(w, req)
+	stats(guild.NewGuildStore(), user.NewUserStore()).ServeHTTP(w, req)
 
 	assert.Exactlyf(t, w.Code, http.StatusOK, "stats handler returned wrong status code: got %v want %v", w.Code, http.StatusOK)
 

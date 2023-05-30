@@ -12,6 +12,9 @@ import (
 	"strconv"
 	"syscall"
 	"time"
+
+	"github.com/sonastea/hypebot/internal/datastore/guild"
+	"github.com/sonastea/hypebot/internal/datastore/user"
 )
 
 type HypeServer struct {
@@ -23,10 +26,10 @@ type HypeServer struct {
 var DB *sql.DB
 var TotalServers, TotalUsers uint64
 
-func NewHypeServer(db *sql.DB) (*HypeServer, error) {
+func NewHypeServer(db *sql.DB, gs *guild.Store, us *user.Store) (*HypeServer, error) {
 	DB = db
 	mux := http.NewServeMux()
-	mux.HandleFunc("/stats", stats)
+	mux.Handle("/stats", stats(gs, us))
 
 	s := &HypeServer{
 		server: &http.Server{
@@ -66,18 +69,21 @@ func (hs *HypeServer) Stop(ctx context.Context, sig chan os.Signal) error {
 	return nil
 }
 
-func stats(w http.ResponseWriter, r *http.Request) {
-	enableCors(&w, r)
+func stats(gs *guild.Store, us *user.Store) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		enableCors(&w, r)
 
-	data := make(map[string]string)
-	TotalServers, TotalUsers = GetStats()
+		data := make(map[string]string)
+		TotalServers, _ = gs.GetTotalServed(DB)
+		TotalUsers, _ = us.GetTotalServed(DB)
 
-	data["servers"] = strconv.FormatUint(TotalServers, 10)
-	data["users"] = strconv.FormatUint(TotalUsers, 10)
+		data["servers"] = strconv.FormatUint(TotalServers, 10)
+		data["users"] = strconv.FormatUint(TotalUsers, 10)
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(data)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(data)
+	})
 }
 
 func enableCors(w *http.ResponseWriter, r *http.Request) {

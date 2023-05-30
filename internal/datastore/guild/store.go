@@ -7,13 +7,18 @@ import (
 	"github.com/sonastea/hypebot/internal/hypebot/models"
 )
 
-type Store map[string]*models.Guild
+type CacheStore map[string]*models.Guild
+type Store struct{}
 
-func NewGuildStore() Store {
+func NewGuildCacheStore() CacheStore {
 	return make(map[string]*models.Guild)
 }
 
-func AddGuild(db *sql.DB, guild_id string) {
+func NewGuildStore() *Store {
+	return new(Store)
+}
+
+func (gs Store) AddGuild(db *sql.DB, guild_id string) {
 	stmt, err := db.Prepare("INSERT OR IGNORE INTO Guild (UID) VALUES (?);")
 	if err != nil {
 		log.Println(err)
@@ -37,7 +42,7 @@ func AddGuild(db *sql.DB, guild_id string) {
 	}
 }
 
-func FindGuild(db *sql.DB, guild_id string) (bool, error) {
+func (gs Store) FindGuild(db *sql.DB, guild_id string) (bool, error) {
 	stmt, err := db.Prepare("SELECT UID from Guild WHERE Guild.UID = ?;")
 	if err != nil {
 		log.Println(err)
@@ -62,7 +67,7 @@ func FindGuild(db *sql.DB, guild_id string) (bool, error) {
 	return false, nil
 }
 
-func GetGuild(db *sql.DB, guild_id string) *models.Guild {
+func (gs Store) GetGuild(db *sql.DB, guild_id string) *models.Guild {
 	res, err := db.Query("SELECT UID, Active, CreatedAt, UpdatedAt from Guild Where Guild.UID = ?;", guild_id)
 	if err != nil {
 		log.Println(err)
@@ -83,7 +88,7 @@ func GetGuild(db *sql.DB, guild_id string) *models.Guild {
 	return guild
 }
 
-func RemoveGuild(db *sql.DB, guild_id string) {
+func (gs Store) RemoveGuild(db *sql.DB, guild_id string) {
 	stmt, err := db.Prepare("UPDATE Guild SET active = 0 WHERE Guild.UID = ?;")
 	if err != nil {
 		log.Println(err)
@@ -106,15 +111,15 @@ func RemoveGuild(db *sql.DB, guild_id string) {
 	}
 }
 
-func GetTotalServed(db *sql.DB) (uint64, bool) {
-	var totalUsers uint64
+func (gs Store) GetTotalServed(db *sql.DB) (uint64, bool) {
+	var totalServers uint64
 
-	err := db.QueryRow("SELECT COUNT(*) FROM Guild;").Scan(&totalUsers)
+	err := db.QueryRow("SELECT COUNT(*) FROM Guild;").Scan(&totalServers)
 	switch {
 	case err != nil:
 		log.Println(err)
 		return 0, false
 	default:
-		return totalUsers, true
+		return totalServers, true
 	}
 }
