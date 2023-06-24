@@ -1,8 +1,9 @@
-version: "3.9"
+version: "3.8"
+
 services:
   hypebot:
     container_name: hypebot
-    image: "ghcr.io/sonastea/hypebot:master"
+    image: "ghcr.io/sonastea/hypebot:latest"
     env_file: .env
     build:
       context: .
@@ -23,7 +24,7 @@ services:
 
   hypeserver:
     container_name: hypeserver
-    image: "ghcr.io/sonastea/hypeserver:master"
+    image: "ghcr.io/sonastea/hypeserver:latest"
     build:
       context: .
       dockerfile: ./docker/hypeserver/Dockerfile
