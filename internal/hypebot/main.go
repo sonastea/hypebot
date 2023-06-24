@@ -92,6 +92,7 @@ func (hb *HypeBot) Run() chan os.Signal {
 		return nil
 	}
 	hb.s.StateEnabled = true
+	hb.s.LogLevel = discordgo.LogInformational
 
 	hb.s.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsGuilds)
 

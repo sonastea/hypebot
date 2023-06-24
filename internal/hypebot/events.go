@@ -38,6 +38,7 @@ func (hb *HypeBot) listenVoiceStateUpdate(s *discordgo.Session, e *discordgo.Voi
 			hb.guildCacheStore[e.GuildID].VCS[e.ChannelID] = append(hb.guildCacheStore[e.GuildID].VCS[e.ChannelID], filePath)
 			if !hb.guildCacheStore[e.GuildID].Playing {
 				vc, err = hb.s.ChannelVoiceJoin(e.VoiceState.GuildID, e.ChannelID, false, false)
+				vc.LogLevel = discordgo.LogInformational
 				if err != nil {
 					log.Println(err)
 				}
