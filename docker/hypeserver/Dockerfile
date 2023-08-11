@@ -1,10 +1,10 @@
 # syntax=docker/dockerfile:1
 
-FROM golang:1.20.2-alpine as builder
+FROM golang:1.21-alpine as builder
 
 ENV PATH="${PATH}:/app/"
 
-RUN apk add --no-cache build-base=0.5-r3 bash=5.2.15-r0
+RUN apk add --no-cache build-base=0.5-r3 bash=5.2.15-r5
 
 WORKDIR /app
 
