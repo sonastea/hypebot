@@ -22,7 +22,7 @@ FROM alpine:3.17.3
 
 ENV PATH="${PATH}:/app/"
 
-RUN apk add --no-cache ffmpeg=5.1.3-r0 python3=3.10.12-r0
+RUN apk add --no-cache ffmpeg=5.1.3-r0 python3=3.10.13-r0
 
 COPY --from=builder /app/hypebot /app/hypebot
 COPY --from=builder /app/yt-dlp /app/yt-dlp
