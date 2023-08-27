@@ -4,11 +4,11 @@ FROM golang:1.21-alpine
 
 ENV PATH="${PATH}:/app/"
 
-RUN apk add --no-cache build-base=0.5-r3 bash=5.2.15-r0 ffmpeg=5.1.2-r1 python3=3.10.10-r0
+RUN apk add --no-cache build-base=0.5-r3 bash=5.2.15-r5 ffmpeg=6.0-r15 python3=3.11.5-r0
 
 WORKDIR /app
 
-ADD https://github.com/yt-dlp/yt-dlp/releases/download/2023.03.04/yt-dlp /app/yt-dlp
+ADD https://github.com/yt-dlp/yt-dlp/releases/download/2023.07.06/yt-dlp /app/yt-dlp
 
 COPY go.mod .
 COPY go.sum .
