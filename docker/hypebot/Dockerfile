@@ -8,7 +8,7 @@ RUN apk add --no-cache build-base=0.5-r3 bash=5.2.15-r5
 
 WORKDIR /app
 
-ADD https://github.com/yt-dlp/yt-dlp/releases/download/2023.07.06/yt-dlp /app/yt-dlp
+ADD https://github.com/yt-dlp/yt-dlp/releases/download/2023.10.13/yt-dlp /app/yt-dlp
 
 COPY go.mod .
 COPY go.sum .
@@ -18,7 +18,7 @@ COPY . .
 
 RUN go build ./cmd/hypebot/ && chmod +x /app/yt-dlp
 
-FROM alpine:3.17.3
+FROM alpine:3.17.5
 
 ENV PATH="${PATH}:/app/"
 
