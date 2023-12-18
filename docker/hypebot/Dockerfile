@@ -4,11 +4,11 @@ FROM golang:1.21-alpine as builder
 
 ENV PATH="${PATH}:/app/"
 
-RUN apk add --no-cache build-base=0.5-r3 bash=5.2.15-r5
+RUN apk add --no-cache build-base=0.5-r3 bash=5.2.21-r0
 
 WORKDIR /app
 
-ADD https://github.com/yt-dlp/yt-dlp/releases/download/2023.10.13/yt-dlp /app/yt-dlp
+ADD https://github.com/yt-dlp/yt-dlp/releases/download/2023.11.16/yt-dlp /app/yt-dlp
 
 COPY go.mod .
 COPY go.sum .
@@ -18,11 +18,11 @@ COPY . .
 
 RUN go build ./cmd/hypebot/ && chmod +x /app/yt-dlp
 
-FROM alpine:3.17.5
+FROM alpine:3.18.5
 
 ENV PATH="${PATH}:/app/"
 
-RUN apk add --no-cache ffmpeg=5.1.3-r0 python3=3.10.13-r0
+RUN apk add --no-cache ffmpeg=6.0.1-r0 python3=3.11.6-r0
 
 COPY --from=builder /app/hypebot /app/hypebot
 COPY --from=builder /app/yt-dlp /app/yt-dlp
