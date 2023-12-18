@@ -4,7 +4,7 @@ FROM golang:1.21-alpine as builder
 
 ENV PATH="${PATH}:/app/"
 
-RUN apk add --no-cache build-base=0.5-r3 bash=5.2.15-r5
+RUN apk add --no-cache build-base=0.5-r3 bash=5.2.21-r0
 
 WORKDIR /app
 
@@ -16,7 +16,7 @@ COPY . .
 
 RUN go build ./cmd/hypeserver/
 
-FROM alpine:3.17.3
+FROM alpine:3.18.5
 
 ENV PATH="${PATH}:/app/"
 
