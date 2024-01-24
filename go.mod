@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/bwmarrin/discordgo v0.27.2-0.20230907125633-a2079d3138d2
-	github.com/google/uuid v1.5.0
+	github.com/google/uuid v1.6.0
 	github.com/robrotheram/dca v0.0.0-20240103231016-764e174aecab
 	github.com/stretchr/testify v1.8.2
 )
