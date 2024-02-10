@@ -1,6 +1,6 @@
 module github.com/sonastea/hypebot
 
-go 1.21
+go 1.22
 
 require (
 	github.com/bwmarrin/discordgo v0.27.2-0.20230907125633-a2079d3138d2
