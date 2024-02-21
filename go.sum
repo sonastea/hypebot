@@ -5,6 +5,8 @@ github.com/bwmarrin/discordgo v0.27.2-0.20230816134654-ff9176adccb6 h1:4htHaHl1o
 github.com/bwmarrin/discordgo v0.27.2-0.20230816134654-ff9176adccb6/go.mod h1:NJZpH+1AfhIcyQsPeuBKsUtYrRnjkyu0kIVMCHkZtRY=
 github.com/bwmarrin/discordgo v0.27.2-0.20230907125633-a2079d3138d2 h1:Xq0gvmzCgsUfLDEfdw1gUYiO13BtZIoGnXqV9sQ5BxI=
 github.com/bwmarrin/discordgo v0.27.2-0.20230907125633-a2079d3138d2/go.mod h1:NJZpH+1AfhIcyQsPeuBKsUtYrRnjkyu0kIVMCHkZtRY=
+github.com/bwmarrin/discordgo v0.27.2-0.20240216140604-15ef2a43d47f h1:JbPPi11wmP68QtHaqM0pqfGjMvqDZlFSTO7n/KM+ZdA=
+github.com/bwmarrin/discordgo v0.27.2-0.20240216140604-15ef2a43d47f/go.mod h1:NJZpH+1AfhIcyQsPeuBKsUtYrRnjkyu0kIVMCHkZtRY=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
