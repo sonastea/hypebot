@@ -23,7 +23,8 @@ func main() {
 		log.Fatal()
 	}
 
-	for range botChan {
+	select {
+	case <-botChan:
 		err := b.Stop(botChan)
 		if err != nil {
 			log.Fatalln(err)
