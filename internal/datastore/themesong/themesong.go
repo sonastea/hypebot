@@ -6,6 +6,13 @@ import (
 	"log"
 )
 
+type Themesong struct {
+	id       int
+	Guild_ID string `json:"guild_id"`
+	User_ID  string `json:"user_id"`
+	Filepath string `json:"filepath"`
+}
+
 var message string
 
 func SetThemesong(db *sql.DB, file_path string, guild_id string, user_id string) (message string) {

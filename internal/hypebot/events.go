@@ -5,7 +5,7 @@ import (
 	"log"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/sonastea/hypebot/internal/hypebot/models"
+	"github.com/sonastea/hypebot/internal/datastore/user"
 )
 
 func (hb *HypeBot) listenVoiceStateUpdate(s *discordgo.Session, e *discordgo.VoiceStateUpdate) {
@@ -19,7 +19,7 @@ func (hb *HypeBot) listenVoiceStateUpdate(s *discordgo.Session, e *discordgo.Voi
 		// If user doesn't exist, add them to the database
 		exists := hb.userStore.FindUser(hb.db, e.GuildID, e.VoiceState.UserID)
 		if !exists {
-			newUser := &models.User{
+			newUser := &user.User{
 				Guild_ID: e.GuildID,
 				UID:      e.VoiceState.UserID,
 			}
