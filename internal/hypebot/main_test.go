@@ -10,7 +10,6 @@ import (
 	"github.com/sonastea/hypebot/internal/database"
 	"github.com/sonastea/hypebot/internal/datastore/guild"
 	"github.com/sonastea/hypebot/internal/datastore/user"
-	"github.com/sonastea/hypebot/internal/hypebot/models"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -47,7 +46,7 @@ func TestMain(m *testing.M) {
 				ID: "mock",
 			},
 		},
-		guildCacheStore: make(map[string]*models.Guild),
+		guildCacheStore: make(map[string]*guild.Guild),
 		guildStore:      guild.NewGuildStore(),
 		userStore:       user.NewUserStore(),
 	}

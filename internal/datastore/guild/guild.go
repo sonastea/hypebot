@@ -3,15 +3,31 @@ package guild
 import (
 	"database/sql"
 	"log"
-
-	"github.com/sonastea/hypebot/internal/hypebot/models"
 )
 
-type CacheStore map[string]*models.Guild
+type Guild struct {
+	id        int
+	UID       string `json:"uid"`
+	VCS       map[string][]string
+	Playing   bool
+	Active    int8   `json:"active"`
+	CreatedAt string `json:"createdAt,omitempty"`
+	UpdatedAt string `json:"updatedAt,omitempty"`
+}
+
+type GuildStore interface {
+	AddGuild(db *sql.DB, guild_id string)
+	FindGuild(db *sql.DB, guild_id string) (bool, error)
+	GetGuild(db *sql.DB, guild_id string) *Guild
+	RemoveGuild(db *sql.DB, guild_id string)
+	GetTotalServed(db *sql.DB) (uint64, bool)
+}
+
+type CacheStore map[string]*Guild
 type Store struct{}
 
 func NewGuildCacheStore() CacheStore {
-	return make(map[string]*models.Guild)
+	return make(map[string]*Guild)
 }
 
 func NewGuildStore() *Store {
@@ -67,14 +83,14 @@ func (gs Store) FindGuild(db *sql.DB, guild_id string) (bool, error) {
 	return false, nil
 }
 
-func (gs Store) GetGuild(db *sql.DB, guild_id string) *models.Guild {
+func (gs Store) GetGuild(db *sql.DB, guild_id string) *Guild {
 	res, err := db.Query("SELECT UID, Active, CreatedAt, UpdatedAt from Guild Where Guild.UID = ?;", guild_id)
 	if err != nil {
 		log.Println(err)
 	}
 	defer res.Close()
 
-	var guild = &models.Guild{
+	var guild = &Guild{
 		VCS: make(map[string][]string),
 	}
 

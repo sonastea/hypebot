@@ -3,9 +3,23 @@ package user
 import (
 	"database/sql"
 	"log"
-
-	"github.com/sonastea/hypebot/internal/hypebot/models"
+	"time"
 )
+
+type User struct {
+	id        int
+	UID       string     `json:"uid"`
+	Guild_ID  string     `json:"guild_id"`
+	CreatedAt *time.Time `json:"createdAt,omitempty"`
+	UpdatedAt *time.Time `json:"updatedAt,omitempty"`
+}
+
+type UserStore interface {
+	FindUser(db *sql.DB, guild_id string, user_id string) bool
+	AddUser(db *sql.DB, user User)
+	GetThemesong(db *sql.DB, guild_id string, user_id string) (filePath string, ok bool)
+	GetTotalServed(db *sql.DB) (uint64, bool)
+}
 
 type Store struct{}
 
@@ -23,7 +37,7 @@ func (us Store) FindUser(db *sql.DB, guild_id string, user_id string) bool {
 	return true
 }
 
-func (us Store) AddUser(db *sql.DB, user models.User) {
+func (us Store) AddUser(db *sql.DB, user User) {
 	stmt, err := db.Prepare("INSERT OR IGNORE INTO User (guild_id, UID) VALUES (?,?);")
 	if err != nil {
 		log.Println(err)
@@ -68,7 +82,7 @@ func (us Store) GetThemesong(db *sql.DB, guild_id string, user_id string) (fileP
 	return "", false
 }
 
-func (us Store) GetTotalServed(db *sql.DB) (uint64, bool) {
+func (us *Store) GetTotalServed(db *sql.DB) (uint64, bool) {
 	var totalUsers uint64
 
 	err := db.QueryRow("SELECT COUNT(*) FROM User;").Scan(&totalUsers)
