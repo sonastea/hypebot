@@ -26,6 +26,8 @@ type GuildStore interface {
 type CacheStore map[string]*Guild
 type Store struct{}
 
+var _ GuildStore = &Store{}
+
 func NewGuildCacheStore() CacheStore {
 	return make(map[string]*Guild)
 }
@@ -34,7 +36,7 @@ func NewGuildStore() *Store {
 	return new(Store)
 }
 
-func (gs Store) AddGuild(db *sql.DB, guild_id string) {
+func (gs *Store) AddGuild(db *sql.DB, guild_id string) {
 	stmt, err := db.Prepare("INSERT OR IGNORE INTO Guild (UID) VALUES (?);")
 	if err != nil {
 		log.Println(err)
@@ -58,7 +60,7 @@ func (gs Store) AddGuild(db *sql.DB, guild_id string) {
 	}
 }
 
-func (gs Store) FindGuild(db *sql.DB, guild_id string) (bool, error) {
+func (gs *Store) FindGuild(db *sql.DB, guild_id string) (bool, error) {
 	stmt, err := db.Prepare("SELECT UID from Guild WHERE Guild.UID = ?;")
 	if err != nil {
 		log.Println(err)
@@ -83,7 +85,7 @@ func (gs Store) FindGuild(db *sql.DB, guild_id string) (bool, error) {
 	return false, nil
 }
 
-func (gs Store) GetGuild(db *sql.DB, guild_id string) *Guild {
+func (gs *Store) GetGuild(db *sql.DB, guild_id string) *Guild {
 	res, err := db.Query("SELECT UID, Active, CreatedAt, UpdatedAt from Guild Where Guild.UID = ?;", guild_id)
 	if err != nil {
 		log.Println(err)
@@ -104,7 +106,7 @@ func (gs Store) GetGuild(db *sql.DB, guild_id string) *Guild {
 	return guild
 }
 
-func (gs Store) RemoveGuild(db *sql.DB, guild_id string) {
+func (gs *Store) RemoveGuild(db *sql.DB, guild_id string) {
 	stmt, err := db.Prepare("UPDATE Guild SET active = 0 WHERE Guild.UID = ?;")
 	if err != nil {
 		log.Println(err)
@@ -127,7 +129,7 @@ func (gs Store) RemoveGuild(db *sql.DB, guild_id string) {
 	}
 }
 
-func (gs Store) GetTotalServed(db *sql.DB) (uint64, bool) {
+func (gs *Store) GetTotalServed(db *sql.DB) (uint64, bool) {
 	var totalServers uint64
 
 	err := db.QueryRow("SELECT COUNT(*) FROM Guild;").Scan(&totalServers)
