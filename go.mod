@@ -3,7 +3,7 @@ module github.com/sonastea/hypebot
 go 1.22
 
 require (
-	github.com/bwmarrin/discordgo v0.27.2-0.20240216140604-15ef2a43d47f
+	github.com/bwmarrin/discordgo v0.27.2-0.20240315152229-33ee38cbf271
 	github.com/google/uuid v1.6.0
 	github.com/robrotheram/dca v0.0.0-20240103231016-764e174aecab
 	github.com/stretchr/testify v1.8.2
