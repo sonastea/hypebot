@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -138,11 +139,11 @@ func (hb *HypeBot) downloadVideo(url string, start_time string, duration string)
 		cmd := exec.Command(ytdl, args...)
 		if data, err := cmd.Output(); err != nil && err.Error() != "exit status 101" {
 			log.Printf("{yt-dlp}-unhandled: %v (%v, %v, %v) \n", err, url, start_time, duration)
-			return "", errors.New("There was an error processing your request ⚠️")
+			return "", fmt.Errorf("There was an error processing your request ⚠️")
 		} else {
 			if len(data) < 1 {
 				log.Printf("{yt-dlp}-no_data: %v (%v, %v, %v) \n", err, url, start_time, duration)
-				return "", errors.New("Unable to retrieve requested audio ⚠️")
+				return "", fmt.Errorf("Unable to retrieve requested audio ⚠️")
 			}
 
 			videoMetaData := VideoMetaData{}
@@ -158,7 +159,7 @@ func (hb *HypeBot) downloadVideo(url string, start_time string, duration string)
 			}
 
 			if st < 0 || st > videoMetaData.Duration {
-				return "", errors.New("Invalid start time ⚠️")
+				return "", fmt.Errorf("Invalid start time ⚠️")
 			}
 
 			fmpg, err := exec.LookPath("ffmpeg")
@@ -211,6 +212,10 @@ func (hb *HypeBot) downloadVideo(url string, start_time string, duration string)
 func (hb *HypeBot) validateUrl(url string) (valid bool, err error) {
 	ytdl, err := exec.LookPath("yt-dlp")
 	if err != nil {
+    if (strings.Contains(err.Error(), "$PATH")) {
+      log.Printf("{yt-dlp}-not_found: in $PATH")
+      return false, fmt.Errorf("There was an error processing your command :warning:")
+    }
 		return false, err
 	}
 
@@ -232,11 +237,11 @@ func (hb *HypeBot) validateUrl(url string) (valid bool, err error) {
 	if err = cmd.Run(); err != nil && err.Error() != "exit status 101" {
 		dlerr := string(bytes.Split(stderr.Bytes(), []byte(":"))[2])
 		log.Printf("{yt-dlp}-not_live: %v -%v \n", err, dlerr)
-		return false, errors.New(fmt.Sprint(dlerr, ":warning:"))
+		return false, fmt.Errorf(dlerr, ":warning:")
 	}
 
 	if bytes.Contains(stdout.Bytes(), []byte("!is_live")) {
-		return false, errors.New("Unable to process a live video :warning:")
+		return false, fmt.Errorf("Unable to process a live video :warning:")
 	}
 
 	args[6] = "duration < 600"
@@ -246,11 +251,11 @@ func (hb *HypeBot) validateUrl(url string) (valid bool, err error) {
 	if err = cmd.Run(); err != nil && err.Error() != "exit status 101" {
 		dlerr := string(bytes.Split(stderr.Bytes(), []byte(":"))[2])
 		log.Printf("{yt-dlp}-not_live: %v -%v \n", err, dlerr)
-		return false, errors.New(fmt.Sprint(dlerr, ":warning:"))
+		return false, fmt.Errorf(fmt.Sprint(dlerr, ":warning:"))
 	}
 
 	if bytes.Contains(stdout.Bytes(), []byte("duration < 600")) {
-		return false, errors.New("Video must not exceed 10 minutes :warning:")
+		return false, fmt.Errorf("Video must not exceed 10 minutes :warning:")
 	}
 
 	return true, nil
