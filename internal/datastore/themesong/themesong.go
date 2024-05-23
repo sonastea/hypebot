@@ -15,7 +15,7 @@ type Themesong struct {
 
 var message string
 
-func SetThemesong(db *sql.DB, file_path string, guild_id string, user_id string) (message string) {
+func Set(db *sql.DB, file_path string, guild_id string, user_id string) (message string) {
 	stmt, err := db.Prepare("INSERT OR IGNORE INTO Themesong (id, guild_id, user_id, Filepath) VALUES (?, ?, ?, ?);")
 	if err != nil {
 		log.Println(err)
@@ -44,7 +44,7 @@ func SetThemesong(db *sql.DB, file_path string, guild_id string, user_id string)
 	return message
 }
 
-func UpdateThemesong(db *sql.DB, file_path string, guild_id string, user_id string) (message string) {
+func Update(db *sql.DB, file_path string, guild_id string, user_id string) (message string) {
 	stmt, err := db.Prepare("UPDATE Themesong SET Filepath = ? WHERE guild_id = ? AND user_id = ?;")
 	if err != nil {
 		log.Println(err)
@@ -72,7 +72,7 @@ func UpdateThemesong(db *sql.DB, file_path string, guild_id string, user_id stri
 	return message
 }
 
-func RemoveThemesong(db *sql.DB, guild_id string, user_id string) (message string) {
+func Remove(db *sql.DB, guild_id string, user_id string) (message string) {
 	stmt, err := db.Prepare("DELETE from Themesong WHERE guild_id = ? AND user_id = ?;")
 	if err != nil {
 		log.Println(err)

@@ -1,9 +1,10 @@
 package user
 
 import (
-	"database/sql"
 	"log"
 	"time"
+
+	"github.com/sonastea/hypebot/internal/datastore"
 )
 
 type User struct {
@@ -15,22 +16,24 @@ type User struct {
 }
 
 type UserStore interface {
-	FindUser(db *sql.DB, guild_id string, user_id string) bool
-	AddUser(db *sql.DB, user User)
-	GetThemesong(db *sql.DB, guild_id string, user_id string) (filePath string, ok bool)
-	GetTotalServed(db *sql.DB) (uint64, bool)
+	Find(guild_id string, user_id string) bool
+	Add(user User)
+	GetThemesong(guild_id string, user_id string) (filePath string, ok bool)
+	GetTotalServed() (uint64, bool)
 }
 
-type Store struct{}
+type Store struct {
+	*datastore.Store
+}
 
 var _ UserStore = &Store{}
 
-func NewUserStore() *Store {
-	return new(Store)
+func NewUserStore(store *datastore.Store) *Store {
+	return &Store{Store: store}
 }
 
-func (us *Store) FindUser(db *sql.DB, guild_id string, user_id string) bool {
-	res := db.QueryRow("SELECT UID from User WHERE guild_id = ? AND UID = ?;",
+func (us *Store) Find(guild_id string, user_id string) bool {
+	res := us.DB().QueryRow("SELECT UID from User WHERE guild_id = ? AND UID = ?;",
 		guild_id, user_id).Scan(&user_id)
 	if res != nil {
 		return false
@@ -39,8 +42,8 @@ func (us *Store) FindUser(db *sql.DB, guild_id string, user_id string) bool {
 	return true
 }
 
-func (us *Store) AddUser(db *sql.DB, user User) {
-	stmt, err := db.Prepare("INSERT OR IGNORE INTO User (guild_id, UID) VALUES (?,?);")
+func (us *Store) Add(user User) {
+	stmt, err := us.DB().Prepare("INSERT OR IGNORE INTO User (guild_id, UID) VALUES (?,?);")
 	if err != nil {
 		log.Println(err)
 	}
@@ -63,8 +66,8 @@ func (us *Store) AddUser(db *sql.DB, user User) {
 	}
 }
 
-func (us *Store) GetThemesong(db *sql.DB, guild_id string, user_id string) (filePath string, ok bool) {
-	res, err := db.Query("SELECT Filepath from Themesong Where Themesong.guild_id = ? AND Themesong.user_id = ?;",
+func (us *Store) GetThemesong(guild_id string, user_id string) (filePath string, ok bool) {
+	res, err := us.DB().Query("SELECT Filepath from Themesong Where Themesong.guild_id = ? AND Themesong.user_id = ?;",
 		guild_id, user_id)
 	if err != nil {
 		log.Println(err)
@@ -84,10 +87,10 @@ func (us *Store) GetThemesong(db *sql.DB, guild_id string, user_id string) (file
 	return "", false
 }
 
-func (us *Store) GetTotalServed(db *sql.DB) (uint64, bool) {
+func (us *Store) GetTotalServed() (uint64, bool) {
 	var totalUsers uint64
 
-	err := db.QueryRow("SELECT COUNT(*) FROM User;").Scan(&totalUsers)
+	err := us.DB().QueryRow("SELECT COUNT(*) FROM User;").Scan(&totalUsers)
 	switch {
 	case err != nil:
 		log.Println(err)

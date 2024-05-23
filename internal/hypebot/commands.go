@@ -55,7 +55,7 @@ func (hb *HypeBot) clearCommand(s *discordgo.Session, i *discordgo.InteractionCr
 		},
 	})
 
-	exists := hb.userStore.FindUser(hb.db, i.GuildID, i.Member.User.ID)
+	exists := hb.userStore.Find(i.GuildID, i.Member.User.ID)
 
 	if !exists {
 		msg = "You have not set a themesong with HypeBot."

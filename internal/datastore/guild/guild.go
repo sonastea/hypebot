@@ -1,8 +1,9 @@
 package guild
 
 import (
-	"database/sql"
 	"log"
+
+	"github.com/sonastea/hypebot/internal/datastore"
 )
 
 type Guild struct {
@@ -16,15 +17,18 @@ type Guild struct {
 }
 
 type GuildStore interface {
-	AddGuild(db *sql.DB, guild_id string)
-	FindGuild(db *sql.DB, guild_id string) (bool, error)
-	GetGuild(db *sql.DB, guild_id string) *Guild
-	RemoveGuild(db *sql.DB, guild_id string)
-	GetTotalServed(db *sql.DB) (uint64, bool)
+	Add(guild_id string)
+	Find(guild_id string) (bool, error)
+	Get(guild_id string) *Guild
+	Remove(guild_id string)
+	GetTotalServed() (uint64, bool)
 }
 
 type CacheStore map[string]*Guild
-type Store struct{}
+
+type Store struct {
+	*datastore.Store
+}
 
 var _ GuildStore = &Store{}
 
@@ -32,12 +36,12 @@ func NewGuildCacheStore() CacheStore {
 	return make(map[string]*Guild)
 }
 
-func NewGuildStore() *Store {
-	return new(Store)
+func NewGuildStore(store *datastore.Store) *Store {
+	return &Store{Store: store}
 }
 
-func (gs *Store) AddGuild(db *sql.DB, guild_id string) {
-	stmt, err := db.Prepare("INSERT OR IGNORE INTO Guild (UID) VALUES (?);")
+func (gs *Store) Add(guild_id string) {
+	stmt, err := gs.DB().Prepare("INSERT OR IGNORE INTO Guild (UID) VALUES (?);")
 	if err != nil {
 		log.Println(err)
 	}
@@ -60,8 +64,8 @@ func (gs *Store) AddGuild(db *sql.DB, guild_id string) {
 	}
 }
 
-func (gs *Store) FindGuild(db *sql.DB, guild_id string) (bool, error) {
-	stmt, err := db.Prepare("SELECT UID from Guild WHERE Guild.UID = ?;")
+func (gs *Store) Find(guild_id string) (bool, error) {
+	stmt, err := gs.DB().Prepare("SELECT UID from Guild WHERE Guild.UID = ?;")
 	if err != nil {
 		log.Println(err)
 	}
@@ -85,8 +89,8 @@ func (gs *Store) FindGuild(db *sql.DB, guild_id string) (bool, error) {
 	return false, nil
 }
 
-func (gs *Store) GetGuild(db *sql.DB, guild_id string) *Guild {
-	res, err := db.Query("SELECT UID, Active, CreatedAt, UpdatedAt from Guild Where Guild.UID = ?;", guild_id)
+func (gs *Store) Get(guild_id string) *Guild {
+	res, err := gs.DB().Query("SELECT UID, Active, CreatedAt, UpdatedAt from Guild Where Guild.UID = ?;", guild_id)
 	if err != nil {
 		log.Println(err)
 	}
@@ -106,8 +110,8 @@ func (gs *Store) GetGuild(db *sql.DB, guild_id string) *Guild {
 	return guild
 }
 
-func (gs *Store) RemoveGuild(db *sql.DB, guild_id string) {
-	stmt, err := db.Prepare("UPDATE Guild SET active = 0 WHERE Guild.UID = ?;")
+func (gs *Store) Remove(guild_id string) {
+	stmt, err := gs.DB().Prepare("UPDATE Guild SET active = 0 WHERE Guild.UID = ?;")
 	if err != nil {
 		log.Println(err)
 	}
@@ -129,10 +133,10 @@ func (gs *Store) RemoveGuild(db *sql.DB, guild_id string) {
 	}
 }
 
-func (gs *Store) GetTotalServed(db *sql.DB) (uint64, bool) {
+func (gs *Store) GetTotalServed() (uint64, bool) {
 	var totalServers uint64
 
-	err := db.QueryRow("SELECT COUNT(*) FROM Guild;").Scan(&totalServers)
+	err := gs.DB().QueryRow("SELECT COUNT(*) FROM Guild;").Scan(&totalServers)
 	switch {
 	case err != nil:
 		log.Println(err)
