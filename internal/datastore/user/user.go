@@ -23,13 +23,13 @@ type UserStore interface {
 }
 
 type Store struct {
-	*datastore.Store
+  datastore.BaseStore
 }
 
 var _ UserStore = &Store{}
 
-func NewUserStore(store *datastore.Store) *Store {
-	return &Store{Store: store}
+func NewUserStore(store datastore.BaseStore) *Store {
+	return &Store{BaseStore: store}
 }
 
 func (us *Store) Find(guild_id string, user_id string) bool {

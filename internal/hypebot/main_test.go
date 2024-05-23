@@ -10,13 +10,15 @@ import (
 	"github.com/sonastea/hypebot/internal/database"
 	"github.com/sonastea/hypebot/internal/datastore/guild"
 	"github.com/sonastea/hypebot/internal/datastore/user"
+	"github.com/sonastea/hypebot/internal/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
-	hb  *HypeBot
-	db  *sql.DB
-	mhb *MockedHypeBot
+	hb        *HypeBot
+	db        *sql.DB
+	mhb       *MockedHypeBot
+	mockStore *testutils.MockStore
 
 	testBotToken = os.Getenv("TEST_TOKEN")
 )
@@ -39,6 +41,8 @@ func TestMain(m *testing.M) {
 		log.Println(err)
 	}
 
+  mockStore = testutils.NewMockStore(db)
+
 	mhb = &MockedHypeBot{
 		db: db,
 		guilds: []*discordgo.Guild{
@@ -47,8 +51,8 @@ func TestMain(m *testing.M) {
 			},
 		},
 		guildCacheStore: make(map[string]*guild.Guild),
-		guildStore:      guild.NewGuildStore(),
-		userStore:       user.NewUserStore(),
+		guildStore:      guild.NewGuildStore(mockStore),
+		userStore:       user.NewUserStore(mockStore),
 	}
 
 	os.Exit(m.Run())
@@ -56,8 +60,8 @@ func TestMain(m *testing.M) {
 
 func (mhb *MockedHypeBot) InitGuildStore() {
 	for _, g := range mhb.guilds {
-		mhb.guildStore.AddGuild(mhb.db, g.ID)
-		mhb.guildCacheStore[g.ID] = mhb.guildStore.GetGuild(mhb.db, g.ID)
+		mhb.guildStore.Add(g.ID)
+		mhb.guildCacheStore[g.ID] = mhb.guildStore.Get(g.ID)
 	}
 }
 
@@ -80,8 +84,8 @@ func TestHandleCommands(t *testing.T) {
 		s:               dg,
 		db:              db,
 		guildCacheStore: guild.NewGuildCacheStore(),
-		guildStore:      guild.NewGuildStore(),
-		userStore:       user.NewUserStore(),
+		guildStore:      guild.NewGuildStore(mockStore),
+		userStore:       user.NewUserStore(mockStore),
 	}
 
 	err = hb.s.Open()
@@ -121,8 +125,8 @@ func TestNewHypeBot(t *testing.T) {
 		s:               dg,
 		db:              db,
 		guildCacheStore: guild.NewGuildCacheStore(),
-		guildStore:      guild.NewGuildStore(),
-		userStore:       user.NewUserStore(),
+		guildStore:      guild.NewGuildStore(mockStore),
+		userStore:       user.NewUserStore(mockStore),
 	}
 
 	assert.IsType(t, &HypeBot{}, hb)

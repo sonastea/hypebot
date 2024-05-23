@@ -11,18 +11,24 @@ import (
 	"github.com/sonastea/hypebot/internal/database"
 	"github.com/sonastea/hypebot/internal/datastore/guild"
 	"github.com/sonastea/hypebot/internal/datastore/user"
+	"github.com/sonastea/hypebot/internal/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
 	err error
-	hs  *HypeServer
+
+	db        *sql.DB
+	hs        *HypeServer
+	mockStore *testutils.MockStore
 )
 
 func TestMain(m *testing.M) {
-	DB, _ = sql.Open("sqlite3", ":memory:")
+	db, _ = sql.Open("sqlite3", ":memory:")
 
-	_, err := DB.Exec(database.Schema)
+	mockStore = testutils.NewMockStore(db)
+
+	_, err := db.Exec(database.Schema)
 	if err != nil {
 		log.Println(err)
 	}
@@ -31,7 +37,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestNewHypeServer(t *testing.T) {
-	hs, err = NewHypeServer(DB, guild.NewGuildStore(), user.NewUserStore())
+	hs, err = NewHypeServer(guild.NewGuildStore(mockStore), user.NewUserStore(mockStore))
 	if err != nil {
 		t.Fatalf("unable to create hypeserver: %s", err)
 	}
@@ -56,7 +62,7 @@ func TestStats(t *testing.T) {
 	}
 
 	w := httptest.NewRecorder()
-	stats(guild.NewGuildStore(), user.NewUserStore()).ServeHTTP(w, req)
+	stats(guild.NewGuildStore(mockStore), user.NewUserStore(mockStore)).ServeHTTP(w, req)
 
 	assert.Exactlyf(t, w.Code, http.StatusOK, "stats handler returned wrong status code: got %v want %v", w.Code, http.StatusOK)
 

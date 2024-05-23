@@ -27,7 +27,7 @@ type GuildStore interface {
 type CacheStore map[string]*Guild
 
 type Store struct {
-	*datastore.Store
+	datastore.BaseStore
 }
 
 var _ GuildStore = &Store{}
@@ -36,8 +36,8 @@ func NewGuildCacheStore() CacheStore {
 	return make(map[string]*Guild)
 }
 
-func NewGuildStore(store *datastore.Store) *Store {
-	return &Store{Store: store}
+func NewGuildStore(store datastore.BaseStore) *Store {
+	return &Store{BaseStore: store}
 }
 
 func (gs *Store) Add(guild_id string) {
