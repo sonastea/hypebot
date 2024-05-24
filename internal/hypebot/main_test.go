@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/bwmarrin/discordgo"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/sonastea/hypebot/internal/database"
 	"github.com/sonastea/hypebot/internal/datastore/guild"
 	"github.com/sonastea/hypebot/internal/datastore/user"
@@ -41,7 +42,7 @@ func TestMain(m *testing.M) {
 		log.Println(err)
 	}
 
-  mockStore = testutils.NewMockStore(db)
+	mockStore = testutils.NewMockStore(db)
 
 	mhb = &MockedHypeBot{
 		db: db,
