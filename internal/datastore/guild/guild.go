@@ -50,13 +50,12 @@ func (gs *Store) Add(guild_id string) {
 	if err != nil {
 		log.Println(err)
 	}
+  defer stmt.Close()
 
 	rows, err := res.RowsAffected()
 	if err != nil {
 		log.Println(err)
 	}
-
-	defer stmt.Close()
 
 	// Check if guild was added because it didn't exist
 	if rows > 0 {
@@ -65,22 +64,24 @@ func (gs *Store) Add(guild_id string) {
 }
 
 func (gs *Store) Find(guild_id string) (bool, error) {
-	stmt, err := gs.DB().Prepare("SELECT UID from Guild WHERE Guild.UID = ?;")
+	stmt, err := gs.DB().Prepare("SELECT UID FROM Guild WHERE Guild.UID = ?;")
 	if err != nil {
 		log.Println(err)
+		return false, err
 	}
 
 	res, err := stmt.Exec(guild_id)
 	if err != nil {
 		log.Println(err)
+		return false, err
 	}
+  defer stmt.Close()
 
 	rows, err := res.RowsAffected()
 	if err != nil {
 		log.Println(err)
+		return false, err
 	}
-
-	defer stmt.Close()
 
 	if rows > 0 {
 		return true, nil

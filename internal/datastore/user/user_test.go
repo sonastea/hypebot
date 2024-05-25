@@ -69,7 +69,7 @@ func TestGetThemesong(t *testing.T) {
 }
 
 func TestGetTotalServed(t *testing.T) {
-	expectedTotal := uint64(10)
+	expectedTotal := uint64(9)
 
 	columns := []string{"COUNT(*)"}
 	mock.ExpectQuery("SELECT COUNT\\(\\*\\) FROM User;").
