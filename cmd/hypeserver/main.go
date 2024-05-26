@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/sonastea/hypebot/internal/database"
+	"github.com/sonastea/hypebot/internal/datastore"
 	"github.com/sonastea/hypebot/internal/datastore/guild"
 	"github.com/sonastea/hypebot/internal/datastore/user"
 	"github.com/sonastea/hypebot/internal/hypeserver"
@@ -15,10 +16,15 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	gs := guild.NewGuildStore()
-	us := user.NewUserStore()
+  store, err := datastore.New(db)
+	if err != nil {
+		log.Fatalln(err)
+	}
 
-	hs, err := hypeserver.NewHypeServer(db, gs, us)
+	gs := guild.NewGuildStore(store)
+	us := user.NewUserStore(store)
+
+	hs, err := hypeserver.NewHypeServer(gs, us)
 	if err != nil {
 		log.Fatalln(err)
 	}

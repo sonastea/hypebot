@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/sonastea/hypebot/internal/datastore"
 	"github.com/sonastea/hypebot/internal/datastore/guild"
 	"github.com/sonastea/hypebot/internal/datastore/user"
 )
@@ -47,19 +48,24 @@ func NewHypeBot(db *sql.DB) (hb *HypeBot, err error) {
 		return nil, err
 	}
 
+	store, err := datastore.New(db)
+	if err != nil {
+		return nil, err
+	}
+
 	return &HypeBot{
 		s:               dg,
 		db:              db,
 		guildCacheStore: guild.NewGuildCacheStore(),
-		guildStore:      guild.NewGuildStore(),
-		userStore:       user.NewUserStore(),
+		guildStore:      guild.NewGuildStore(store),
+		userStore:       user.NewUserStore(store),
 	}, nil
 }
 
 func (hb *HypeBot) initGuildStore() {
 	for _, g := range hb.s.State.Guilds {
-		hb.guildStore.AddGuild(hb.db, g.ID)
-		hb.guildCacheStore[g.ID] = hb.guildStore.GetGuild(hb.db, g.ID)
+		hb.guildStore.Add(g.ID)
+		hb.guildCacheStore[g.ID] = hb.guildStore.Get(g.ID)
 	}
 }
 

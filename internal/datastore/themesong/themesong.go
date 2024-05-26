@@ -2,7 +2,6 @@ package themesong
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 )
 
@@ -13,38 +12,74 @@ type Themesong struct {
 	Filepath string `json:"filepath"`
 }
 
-var message string
+var (
+	SONG_ADDED_SUCCESS   = "Added themesong ✅"
+	SONG_ADDED_FAIL      = "Error adding themesong ⚠️"
+	SONG_REMOVED_SUCCESS = "Removed themesong ❌"
+	SONG_REMOVED_FAIL    = "Error removing themesong ⚠️"
+	SONG_UPDATED_SUCCESS = "Updated themesong ✅"
+	SONG_UPDATED_FAIL    = "Error updating themesong ⚠️"
+)
 
-func SetThemesong(db *sql.DB, file_path string, guild_id string, user_id string) (message string) {
+func Set(db *sql.DB, file_path string, guild_id string, user_id string) (message string) {
 	stmt, err := db.Prepare("INSERT OR IGNORE INTO Themesong (id, guild_id, user_id, Filepath) VALUES (?, ?, ?, ?);")
 	if err != nil {
 		log.Println(err)
+		return SONG_ADDED_FAIL
 	}
 
 	res, err := stmt.Exec(nil, guild_id, user_id, file_path)
 	if err != nil {
 		log.Println(err)
+		return SONG_ADDED_FAIL
 	}
 
 	rows, err := res.RowsAffected()
 	if err != nil {
 		log.Println(err)
+		return SONG_ADDED_FAIL
 	}
-
 	defer stmt.Close()
 
 	// Check if themesong was added to the database
 	if rows > 0 {
-		message := fmt.Sprintf("Added themesong ✅")
-		log.Printf("%v for Guild:%v - User:%v \n", message, guild_id, user_id)
-		return message
+		log.Printf("%v for Guild:%v - User:%v \n", SONG_ADDED_SUCCESS, guild_id, user_id)
+		return SONG_ADDED_SUCCESS
 	}
 
-	message = "Error adding themesong"
-	return message
+	return SONG_ADDED_FAIL
 }
 
-func UpdateThemesong(db *sql.DB, file_path string, guild_id string, user_id string) (message string) {
+func Remove(db *sql.DB, guild_id string, user_id string) (message string) {
+	stmt, err := db.Prepare("DELETE FROM Themesong WHERE guild_id = ? AND user_id = ?;")
+	if err != nil {
+		log.Println(err)
+		return SONG_REMOVED_FAIL
+	}
+
+	res, err := stmt.Exec(guild_id, user_id)
+	if err != nil {
+		log.Println(err)
+		return SONG_REMOVED_FAIL
+	}
+	defer stmt.Close()
+
+	rows, err := res.RowsAffected()
+	if err != nil {
+		log.Println(err)
+		return SONG_REMOVED_FAIL
+	}
+
+	// Check if themesong was updated true
+	if rows > 0 {
+		log.Printf("%v for Guild:%v - User:%v \n", SONG_REMOVED_SUCCESS, guild_id, user_id)
+		return SONG_REMOVED_SUCCESS
+	}
+
+	return SONG_REMOVED_FAIL
+}
+
+func Update(db *sql.DB, file_path string, guild_id string, user_id string) (message string) {
 	stmt, err := db.Prepare("UPDATE Themesong SET Filepath = ? WHERE guild_id = ? AND user_id = ?;")
 	if err != nil {
 		log.Println(err)
@@ -54,49 +89,17 @@ func UpdateThemesong(db *sql.DB, file_path string, guild_id string, user_id stri
 	if err != nil {
 		log.Println(err)
 	}
+	defer stmt.Close()
 
 	rows, err := res.RowsAffected()
 	if err != nil {
 		log.Println(err)
 	}
 
-	defer stmt.Close()
-
 	if rows > 0 {
-		message := fmt.Sprintf("Updated themesong ✅")
-		log.Printf("%v for Guild:%v - User:%v \n", message, guild_id, user_id)
-		return message
+		log.Printf("%v for Guild:%v - User:%v \n", SONG_UPDATED_SUCCESS, guild_id, user_id)
+		return SONG_UPDATED_SUCCESS
 	}
 
-	message = "Error updating themesong"
-	return message
-}
-
-func RemoveThemesong(db *sql.DB, guild_id string, user_id string) (message string) {
-	stmt, err := db.Prepare("DELETE from Themesong WHERE guild_id = ? AND user_id = ?;")
-	if err != nil {
-		log.Println(err)
-	}
-
-	res, err := stmt.Exec(guild_id, user_id)
-	if err != nil {
-		log.Println(err)
-	}
-
-	rows, err := res.RowsAffected()
-	if err != nil {
-		log.Println(err)
-	}
-
-	defer stmt.Close()
-
-	// Check if themesong was updated true
-	if rows > 0 {
-		message := fmt.Sprintf("Removed themesong ❌")
-		log.Printf("%v for Guild:%v - User:%v \n", message, guild_id, user_id)
-		return message
-	}
-
-	message = "Error removing themesong ⚠️"
-	return message
+	return SONG_UPDATED_FAIL
 }

@@ -29,18 +29,18 @@ type VideoMetaData struct {
 }
 
 func (hb *HypeBot) setThemesong(file_path string, guild_id string, user_id string) string {
-	if filePath, ok := hb.userStore.GetThemesong(hb.db, guild_id, user_id); ok {
+	if filePath, ok := hb.userStore.GetThemesong(guild_id, user_id); ok {
 		// Delete old themesong
 		del := exec.Command("rm", filePath)
 		del.Run()
-		return themesong.UpdateThemesong(hb.db, file_path, guild_id, user_id)
+		return themesong.Update(hb.db, file_path, guild_id, user_id)
 	}
 
-	return themesong.SetThemesong(hb.db, file_path, guild_id, user_id)
+	return themesong.Set(hb.db, file_path, guild_id, user_id)
 }
 
 func (hb *HypeBot) removeThemesong(guild_id string, user_id string) string {
-	return themesong.RemoveThemesong(hb.db, guild_id, user_id)
+	return themesong.Remove(hb.db, guild_id, user_id)
 }
 
 func (hb *HypeBot) playThemesong(e *discordgo.VoiceStateUpdate, vc *discordgo.VoiceConnection) (err error) {
@@ -212,10 +212,10 @@ func (hb *HypeBot) downloadVideo(url string, start_time string, duration string)
 func (hb *HypeBot) validateUrl(url string) (valid bool, err error) {
 	ytdl, err := exec.LookPath("yt-dlp")
 	if err != nil {
-    if (strings.Contains(err.Error(), "$PATH")) {
-      log.Printf("{yt-dlp}-not_found: in $PATH")
-      return false, fmt.Errorf("There was an error processing your command :warning:")
-    }
+		if strings.Contains(err.Error(), "$PATH") {
+			log.Printf("{yt-dlp}-not_found: in $PATH")
+			return false, fmt.Errorf("There was an error processing your command :warning:")
+		}
 		return false, err
 	}
 

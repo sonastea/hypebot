@@ -2,7 +2,6 @@ package hypeserver
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -23,11 +22,9 @@ type HypeServer struct {
 	users   uint64
 }
 
-var DB *sql.DB
 var TotalServers, TotalUsers uint64
 
-func NewHypeServer(db *sql.DB, gs *guild.Store, us *user.Store) (*HypeServer, error) {
-	DB = db
+func NewHypeServer(gs *guild.Store, us *user.Store) (*HypeServer, error) {
 	mux := http.NewServeMux()
 	mux.Handle("/stats", stats(gs, us))
 
@@ -74,8 +71,8 @@ func stats(gs *guild.Store, us *user.Store) http.Handler {
 		enableCors(&w, r)
 
 		data := make(map[string]string)
-		TotalServers, _ = gs.GetTotalServed(DB)
-		TotalUsers, _ = us.GetTotalServed(DB)
+		TotalServers, _ = gs.GetTotalServed()
+		TotalUsers, _ = us.GetTotalServed()
 
 		data["servers"] = strconv.FormatUint(TotalServers, 10)
 		data["users"] = strconv.FormatUint(TotalUsers, 10)
