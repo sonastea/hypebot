@@ -47,6 +47,7 @@ func (us *Store) Add(user User) {
 	if err != nil {
 		log.Println(err)
 	}
+  defer stmt.Close()
 
 	res, err := stmt.Exec(user.Guild_ID, user.UID)
 	if err != nil {
@@ -58,7 +59,6 @@ func (us *Store) Add(user User) {
 		log.Println(err)
 	}
 
-	defer stmt.Close()
 
 	// Check if user was added because it didn't exist
 	if rows > 0 {

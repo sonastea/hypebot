@@ -50,7 +50,7 @@ func (gs *Store) Add(guild_id string) {
 	if err != nil {
 		log.Println(err)
 	}
-  defer stmt.Close()
+	defer stmt.Close()
 
 	rows, err := res.RowsAffected()
 	if err != nil {
@@ -75,7 +75,7 @@ func (gs *Store) Find(guild_id string) (bool, error) {
 		log.Println(err)
 		return false, err
 	}
-  defer stmt.Close()
+	defer stmt.Close()
 
 	rows, err := res.RowsAffected()
 	if err != nil {
@@ -92,10 +92,11 @@ func (gs *Store) Find(guild_id string) (bool, error) {
 
 func (gs *Store) Get(guild_id string) *Guild {
 	res, err := gs.DB().Query("SELECT UID, Active, CreatedAt, UpdatedAt from Guild Where Guild.UID = ?;", guild_id)
+	defer res.Close()
 	if err != nil {
 		log.Println(err)
+		return nil
 	}
-	defer res.Close()
 
 	var guild = &Guild{
 		VCS: make(map[string][]string),
@@ -105,6 +106,7 @@ func (gs *Store) Get(guild_id string) *Guild {
 		err = res.Scan(&guild.UID, &guild.Active, &guild.CreatedAt, &guild.UpdatedAt)
 		if err != nil {
 			log.Println(err)
+			return nil
 		}
 	}
 
