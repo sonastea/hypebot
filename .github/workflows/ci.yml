@@ -24,7 +24,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Go
-        uses: actions/setup-go@6c1fd22b67f7a7c42ad9a45c0f4197434035e429
+        uses: actions/setup-go@4ab57d7ea2fd0c9948210b2e0784e280674e7144
         with:
           go-version: "1.22.x"
 
@@ -47,7 +47,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@83a00bc1ab5ded6580f31df1c49e6aaa932d840d
+        uses: docker/login-action@70fccc794acd729b2b22dd6a326895f286447728
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -55,12 +55,12 @@ jobs:
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
-        uses: docker/metadata-action@8e5442c4ef9f78752691e2d8f8d19755c6f78e81
+        uses: docker/metadata-action@f7b4ed12385588c3f9bc252f0a2b520d83b52d48
         with:
           images: ghcr.io/sonastea/hypebot
 
       - name: Build and push hypebot docker image
-        uses: docker/build-push-action@d236adc9923fc440a0c348660be4bec1c02d7515
+        uses: docker/build-push-action@2a53c6ccda456d31fb62eedc658aae06e238b7bd
         with:
           context: .
           file: ./docker/hypebot/Dockerfile
@@ -81,7 +81,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@83a00bc1ab5ded6580f31df1c49e6aaa932d840d
+        uses: docker/login-action@70fccc794acd729b2b22dd6a326895f286447728
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -89,12 +89,12 @@ jobs:
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
-        uses: docker/metadata-action@8e5442c4ef9f78752691e2d8f8d19755c6f78e81
+        uses: docker/metadata-action@f7b4ed12385588c3f9bc252f0a2b520d83b52d48
         with:
           images: ghcr.io/sonastea/hypeserver
 
       - name: Build and push hypeserver docker image
-        uses: docker/build-push-action@d236adc9923fc440a0c348660be4bec1c02d7515
+        uses: docker/build-push-action@2a53c6ccda456d31fb62eedc658aae06e238b7bd
         with:
           context: .
           file: ./docker/hypeserver/Dockerfile
@@ -107,7 +107,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Deploy and run docker container
-        uses: appleboy/ssh-action@9b978f09f2587beff9c80449f57cb0f0612d3039
+        uses: appleboy/ssh-action@f9163462563f649b27272d32e585525a5fe68d76
         env:
           TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
         with:
