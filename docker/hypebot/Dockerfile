@@ -4,7 +4,7 @@ FROM golang:1.22-alpine as builder
 
 ENV PATH="${PATH}:/app/"
 
-RUN apk add --no-cache build-base=0.5-r3 bash=5.2.21-r0
+RUN apk add --no-cache build-base=0.5-r3 bash=5.2.26-r0
 
 WORKDIR /app
 
