@@ -16,7 +16,7 @@ COPY . .
 
 RUN go build ./cmd/hypeserver/
 
-FROM alpine:3.18.5
+FROM alpine:3.20
 
 ENV PATH="${PATH}:/app/"
 
