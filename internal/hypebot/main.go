@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
@@ -16,13 +17,16 @@ import (
 
 // Variables used for command line parameters
 var (
-	Token          string
-	BotID          string
-	GuildID        string
-	RemoveCommands bool
+	Token           string
+	BotID           string
+	GuildID         string
+	DisableCommands string
+	RemoveCommands  bool
 )
 
 type HypeBot struct {
+	disabledCommands map[string]bool
+
 	s  *discordgo.Session
 	db *sql.DB
 
@@ -36,6 +40,7 @@ func init() {
 	flag.StringVar(&Token, "t", "", "Bot Token")
 	flag.StringVar(&BotID, "bid", "994803132259381291", "User ID of bot")
 	flag.StringVar(&GuildID, "g", "", "Guild in which bot is running")
+	flag.StringVar(&DisableCommands, "discmds", "", "Comma-separated list of commands to disable")
 	flag.BoolVar(&RemoveCommands, "rmcmd", true, "Remove all commands after shutdowning or not")
 }
 
@@ -54,11 +59,12 @@ func NewHypeBot(db *sql.DB) (hb *HypeBot, err error) {
 	}
 
 	return &HypeBot{
-		s:               dg,
-		db:              db,
-		guildCacheStore: guild.NewGuildCacheStore(),
-		guildStore:      guild.NewGuildStore(store),
-		userStore:       user.NewUserStore(store),
+		disabledCommands: make(map[string]bool, len(commands)),
+		s:                dg,
+		db:               db,
+		guildCacheStore:  guild.NewGuildCacheStore(),
+		guildStore:       guild.NewGuildStore(store),
+		userStore:        user.NewUserStore(store),
 	}, nil
 }
 
@@ -69,11 +75,24 @@ func (hb *HypeBot) initGuildStore() {
 	}
 }
 
+func (hb *HypeBot) disableCommands() map[string]bool {
+	disabledCommands := make(map[string]bool, len(commands))
+	if DisableCommands != "" {
+		for _, cmd := range strings.Split(DisableCommands, ",") {
+			disabledCommands[strings.TrimSpace(cmd)] = true
+		}
+	}
+
+	return disabledCommands
+}
+
 func (hb *HypeBot) handleCommands() {
 	commandHandlers := map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
 		"clear": hb.clearCommand,
 		"set":   hb.setCommand,
 	}
+
+	hb.disabledCommands = hb.disableCommands()
 
 	hb.s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		if h, ok := commandHandlers[i.ApplicationCommandData().Name]; ok {
@@ -82,6 +101,10 @@ func (hb *HypeBot) handleCommands() {
 	})
 
 	for i, v := range commands {
+		if hb.disabledCommands[v.Name] {
+			log.Printf("Command `%s` is disabled.", v.Name)
+		}
+
 		cmd, err := hb.s.ApplicationCommandCreate(hb.s.State.User.ID, GuildID, v)
 		if err != nil {
 			log.Panicf("Cannot create '%v' command: %v", v.Name, err)

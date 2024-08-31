@@ -2,6 +2,7 @@ package hypebot
 
 import (
 	"database/sql"
+	"flag"
 	"log"
 	"os"
 	"testing"
@@ -73,6 +74,17 @@ func TestInitGuildStore(t *testing.T) {
 	for i, g := range mhb.guildCacheStore {
 		assert.Exactly(t, g.UID, mhb.guildCacheStore[i].UID, "guild %v from guild store does not match %v", mhb.guildCacheStore[i].UID, g.UID)
 	}
+}
+
+func TestDisableCommands(t *testing.T) {
+	os.Args = []string{"./hypebot", "--discmds=clear,set"}
+	flag.Parse()
+
+	hb := &HypeBot{disabledCommands: make(map[string]bool, 2)}
+	hb.disabledCommands = hb.disableCommands()
+
+	expected := map[string]bool{"clear": true, "set": true}
+	assert.Exactly(t, expected, hb.disabledCommands, "disabled commands should only have 'set'")
 }
 
 func TestHandleCommands(t *testing.T) {
