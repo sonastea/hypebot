@@ -8,7 +8,7 @@ RUN apk add --no-cache build-base=0.5-r3 bash=5.2.26-r0
 
 WORKDIR /app
 
-ADD https://github.com/yt-dlp/yt-dlp/releases/download/2024.05.27/yt-dlp /app/yt-dlp
+ADD https://github.com/yt-dlp/yt-dlp/releases/download/2024.08.06/yt-dlp /app/yt-dlp
 
 COPY go.mod .
 COPY go.sum .
@@ -22,7 +22,7 @@ FROM alpine:3.20
 
 ENV PATH="${PATH}:/app/"
 
-RUN apk add --no-cache ffmpeg=6.1.1-r8 python3=3.12.3-r1
+RUN apk add --no-cache ffmpeg=6.1.1-r8 python3=3.12.3-r2
 
 COPY --from=builder /app/hypebot /app/hypebot
 COPY --from=builder /app/yt-dlp /app/yt-dlp
