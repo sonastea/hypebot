@@ -47,13 +47,13 @@ var (
 )
 
 func commandDisabledResponse(s *discordgo.Session, i *discordgo.InteractionCreate, name string) {
-	message := fmt.Sprintf("The `%s` command is currently disabled.", name)
+	message := fmt.Sprintf("The `%s` command is currently disabled 🚫.", name)
 	_, err := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
 		Content: &message,
 	})
 	if err != nil {
 		s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-			Content: "Something went wrong",
+			Content: "Something went wrong ❌",
 		})
 		return
 	}
