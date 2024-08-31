@@ -9,6 +9,7 @@ services:
       context: .
       args:
         TOKEN: ${TOKEN}
+        DISABLED_COMMANDS: ${DISABLED_COMMANDS}
       dockerfile: ./docker/hypebot/Dockerfile
     logging:
       driver: syslog
@@ -18,6 +19,7 @@ services:
     networks: ["caddy_default"]
     environment:
       - TOKEN
+      - DISABLED_COMMANDS
     volumes:
       - "./songs:/app/songs"
       - "./hypebase.db:/app/hypebase.db"
