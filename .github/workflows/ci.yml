@@ -116,17 +116,16 @@ jobs:
           key: ${{ secrets.VPS_PRIVATE_KEY }}
           script: |
             cd $(pwd)/hypebot
-
-            set -a
-            [ -f .env ] && . .env
-            set -a
-
-            if [ ! -z "${DISABLED_COMMANDS}" ]; then
-              echo "Overriding DISABLED_COMMANDS from GitHub secret"
-              export DISABLED_COMMANDS="${DISABLED_COMMANDS}"
-            fi
-
             git restore .
             git pull
+
+            if [ ! -z "${{ secrets.DISABLED_COMMANDS }}" ]; then
+              if grep -q "DISABLED_COMMANDS" .env; then
+                sed -i "s/^DISABLED_COMMANDS=.*/DISABLED_COMMANDS=${{ secrets.DISABLED_COMMANDS }}/" .env
+              else
+                echo "DISABLED_COMMANDS=${{ secrets.DISABLED_COMMANDS }}" >> .env
+              fi
+            fi
+
             docker compose down --rmi local
             docker compose up -d --force-recreate --pull always
