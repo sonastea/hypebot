@@ -75,7 +75,7 @@ func (hb *HypeBot) initGuildStore() {
 	}
 }
 
-func (hb *HypeBot) disableCommands() map[string]bool {
+func (hb *HypeBot) disableCommands() {
 	disabledCommands := make(map[string]bool, len(commands))
 	if DisableCommands != "" {
 		for _, cmd := range strings.Split(DisableCommands, ",") {
@@ -83,7 +83,7 @@ func (hb *HypeBot) disableCommands() map[string]bool {
 		}
 	}
 
-	return disabledCommands
+	hb.disabledCommands = disabledCommands
 }
 
 func (hb *HypeBot) handleCommands() {
@@ -92,7 +92,7 @@ func (hb *HypeBot) handleCommands() {
 		"set":   hb.setCommand,
 	}
 
-	hb.disabledCommands = hb.disableCommands()
+	hb.disableCommands()
 
 	hb.s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		if h, ok := commandHandlers[i.ApplicationCommandData().Name]; ok {

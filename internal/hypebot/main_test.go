@@ -81,10 +81,12 @@ func TestDisableCommands(t *testing.T) {
 	flag.Parse()
 
 	hb := &HypeBot{disabledCommands: make(map[string]bool, 2)}
-	hb.disabledCommands = hb.disableCommands()
+	hb.disableCommands()
 
 	expected := map[string]bool{"clear": true, "set": true}
 	assert.Exactly(t, expected, hb.disabledCommands, "disabled commands should only have 'set'")
+
+  DisableCommands = ""
 }
 
 func TestHandleCommands(t *testing.T) {
@@ -149,6 +151,6 @@ func TestRunAndStop(t *testing.T) {
 	botChan := hb.Run()
 	assert.NotNil(t, botChan, "unable to return chan os.Signal from running hypebot")
 
-	err := hb.Stop(botChan)
+	err := hb.Stop()
 	assert.Nil(t, err, "unable to shut down hypebot gracefully: %v", err)
 }
