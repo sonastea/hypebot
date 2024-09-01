@@ -139,9 +139,7 @@ func (hb *HypeBot) Run() chan os.Signal {
 	return stop
 }
 
-func (hb *HypeBot) Stop(sig chan os.Signal) error {
-	close(sig)
-
+func (hb *HypeBot) Stop() error {
 	var err error
 
 	err = hb.s.Close()
@@ -159,6 +157,7 @@ func (hb *HypeBot) Stop(sig chan os.Signal) error {
 			err := hb.s.ApplicationCommandDelete(hb.s.State.User.ID, GuildID, v.ID)
 			if err != nil {
 				log.Panicf("Cannot delete '%v' command: %v", v.Name, err)
+				return err
 			}
 		}
 	}
