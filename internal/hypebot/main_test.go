@@ -76,6 +76,16 @@ func TestInitGuildStore(t *testing.T) {
 	}
 }
 
+func TestIsCommandDisabled(t *testing.T) {
+  cmdName := "test-name"
+	hb := &HypeBot{
+    disabledCommands: map[string]bool{cmdName: true},
+	}
+
+	cmd := hb.isCommandDisabled(cmdName)
+	assert.Exactly(t, true, cmd, "cmd should be true, but cmd is %v", cmd)
+}
+
 func TestDisableCommands(t *testing.T) {
 	os.Args = []string{"./hypebot", "--discmds=clear,set"}
 	flag.Parse()
@@ -86,7 +96,7 @@ func TestDisableCommands(t *testing.T) {
 	expected := map[string]bool{"clear": true, "set": true}
 	assert.Exactly(t, expected, hb.disabledCommands, "disabled commands should only have 'set'")
 
-  DisableCommands = ""
+	DisableCommands = ""
 }
 
 func TestHandleCommands(t *testing.T) {

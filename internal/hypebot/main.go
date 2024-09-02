@@ -37,8 +37,8 @@ type HypeBot struct {
 	userStore  *user.Store
 }
 
-type Middleware func(s *discordgo.Session, i *discordgo.InteractionCreate, next func(s *discordgo.Session, i *discordgo.InteractionCreate))
 type InteractionCreateHandler func(s *discordgo.Session, i *discordgo.InteractionCreate)
+type Middleware func(s *discordgo.Session, i *discordgo.InteractionCreate, next InteractionCreateHandler)
 
 func init() {
 	flag.StringVar(&Token, "t", "", "Bot Token")
@@ -52,9 +52,9 @@ func applyMiddlewares(handler InteractionCreateHandler, middlewares []Middleware
 	for i := len(middlewares) - 1; i >= 0; i-- {
 		mw := middlewares[i]
 		next := handler
-		handler = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		handler = InteractionCreateHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			mw(s, i, next)
-		}
+		})
 	}
 
 	return handler
@@ -84,26 +84,38 @@ func NewHypeBot(db *sql.DB) (hb *HypeBot, err error) {
 	}, nil
 }
 
-func (hb *HypeBot) cmdCheckMiddleware(cmdName string) Middleware {
-	return func(s *discordgo.Session, i *discordgo.InteractionCreate, next func(s *discordgo.Session, i *discordgo.InteractionCreate)) {
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Flags:   discordgo.MessageFlagsEphemeral,
-				Content: fmt.Sprintf("Processing %s command...", cmdName),
-			},
-		})
+func (hb *HypeBot) respondCmdProcessing(s *discordgo.Session, i *discordgo.InteractionCreate, name string) {
+	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Flags:   discordgo.MessageFlagsEphemeral,
+			Content: fmt.Sprintf("Processing %s command...", name),
+		},
+	})
+}
 
-		if hb.disabledCommands[cmdName] {
-			message := fmt.Sprintf("The `%s` command is currently disabled 🚫.", cmdName)
-			_, err := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
-				Content: &message,
-			})
-			if err != nil {
-				s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-					Content: "Something went wrong ❌",
-				})
-			}
+func (hb *HypeBot) respondCmdDisabled(s *discordgo.Session, i *discordgo.InteractionCreate, name string) {
+	message := fmt.Sprintf("The `%s` command is currently disabled 🚫.", name)
+	_, err := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+		Content: &message,
+	})
+	if err != nil {
+		s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+			Content: "Something went wrong ❌",
+		})
+	}
+}
+
+func (hb *HypeBot) isCommandDisabled(name string) bool {
+	return hb.disabledCommands[name]
+}
+
+func (hb *HypeBot) cmdCheckMiddleware(name string) Middleware {
+	return func(s *discordgo.Session, i *discordgo.InteractionCreate, next InteractionCreateHandler) {
+		hb.respondCmdProcessing(s, i, name)
+
+		if hb.isCommandDisabled(name) {
+			hb.respondCmdDisabled(s, i, name)
 			return
 		}
 
