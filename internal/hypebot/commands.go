@@ -46,33 +46,7 @@ var (
 	msg                string
 )
 
-func commandDisabledResponse(s *discordgo.Session, i *discordgo.InteractionCreate, name string) {
-	message := fmt.Sprintf("The `%s` command is currently disabled 🚫.", name)
-	_, err := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
-		Content: &message,
-	})
-	if err != nil {
-		s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-			Content: "Something went wrong ❌",
-		})
-		return
-	}
-}
-
 func (hb *HypeBot) clearCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Flags:   discordgo.MessageFlagsEphemeral,
-			Content: "Processing clear command...",
-		},
-	})
-
-	if hb.disabledCommands["clear"] {
-		commandDisabledResponse(s, i, "clear")
-		return
-	}
-
 	exists := hb.userStore.Find(i.GuildID, i.Member.User.ID)
 
 	if !exists {
@@ -101,19 +75,6 @@ func (hb *HypeBot) clearCommand(s *discordgo.Session, i *discordgo.InteractionCr
 }
 
 func (hb *HypeBot) setCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Flags:   discordgo.MessageFlagsEphemeral,
-			Content: "Processing set command...",
-		},
-	})
-
-	if hb.disabledCommands["set"] {
-		commandDisabledResponse(s, i, "set")
-		return
-	}
-
 	opts := i.ApplicationCommandData().Options
 
 	url, start, duration, err := sanitizeSetCommand(opts)

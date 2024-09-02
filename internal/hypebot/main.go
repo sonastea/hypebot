@@ -3,6 +3,7 @@ package hypebot
 import (
 	"database/sql"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -36,12 +37,27 @@ type HypeBot struct {
 	userStore  *user.Store
 }
 
+type InteractionCreateHandler func(s *discordgo.Session, i *discordgo.InteractionCreate)
+type Middleware func(s *discordgo.Session, i *discordgo.InteractionCreate, next InteractionCreateHandler)
+
 func init() {
 	flag.StringVar(&Token, "t", "", "Bot Token")
 	flag.StringVar(&BotID, "bid", "994803132259381291", "User ID of bot")
 	flag.StringVar(&GuildID, "g", "", "Guild in which bot is running")
 	flag.StringVar(&DisableCommands, "discmds", "", "Comma-separated list of commands to disable")
 	flag.BoolVar(&RemoveCommands, "rmcmd", true, "Remove all commands after shutdowning or not")
+}
+
+func applyMiddlewares(handler InteractionCreateHandler, middlewares []Middleware) InteractionCreateHandler {
+	for i := len(middlewares) - 1; i >= 0; i-- {
+		mw := middlewares[i]
+		next := handler
+		handler = InteractionCreateHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			mw(s, i, next)
+		})
+	}
+
+	return handler
 }
 
 func NewHypeBot(db *sql.DB) (hb *HypeBot, err error) {
@@ -68,10 +84,42 @@ func NewHypeBot(db *sql.DB) (hb *HypeBot, err error) {
 	}, nil
 }
 
-func (hb *HypeBot) initGuildStore() {
-	for _, g := range hb.s.State.Guilds {
-		hb.guildStore.Add(g.ID)
-		hb.guildCacheStore[g.ID] = hb.guildStore.Get(g.ID)
+func (hb *HypeBot) respondCmdProcessing(s *discordgo.Session, i *discordgo.InteractionCreate, name string) {
+	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Flags:   discordgo.MessageFlagsEphemeral,
+			Content: fmt.Sprintf("Processing %s command...", name),
+		},
+	})
+}
+
+func (hb *HypeBot) respondCmdDisabled(s *discordgo.Session, i *discordgo.InteractionCreate, name string) {
+	message := fmt.Sprintf("The `%s` command is currently disabled 🚫.", name)
+	_, err := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+		Content: &message,
+	})
+	if err != nil {
+		s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+			Content: "Something went wrong ❌",
+		})
+	}
+}
+
+func (hb *HypeBot) isCommandDisabled(name string) bool {
+	return hb.disabledCommands[name]
+}
+
+func (hb *HypeBot) cmdCheckMiddleware(name string) Middleware {
+	return func(s *discordgo.Session, i *discordgo.InteractionCreate, next InteractionCreateHandler) {
+		hb.respondCmdProcessing(s, i, name)
+
+		if hb.isCommandDisabled(name) {
+			hb.respondCmdDisabled(s, i, name)
+			return
+		}
+
+		next(s, i)
 	}
 }
 
@@ -95,8 +143,14 @@ func (hb *HypeBot) handleCommands() {
 	hb.disableCommands()
 
 	hb.s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		if h, ok := commandHandlers[i.ApplicationCommandData().Name]; ok {
-			h(s, i)
+		name := i.ApplicationCommandData().Name
+
+		if handler, ok := commandHandlers[name]; ok {
+			readyHandler := applyMiddlewares(handler, []Middleware{
+				hb.cmdCheckMiddleware(name),
+			})
+
+			readyHandler(s, i)
 		}
 	})
 
@@ -110,6 +164,13 @@ func (hb *HypeBot) handleCommands() {
 			log.Panicf("Cannot create '%v' command: %v", v.Name, err)
 		}
 		registeredCommands[i] = cmd
+	}
+}
+
+func (hb *HypeBot) initGuildStore() {
+	for _, g := range hb.s.State.Guilds {
+		hb.guildStore.Add(g.ID)
+		hb.guildCacheStore[g.ID] = hb.guildStore.Get(g.ID)
 	}
 }
 
