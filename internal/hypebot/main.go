@@ -37,8 +37,10 @@ type HypeBot struct {
 	userStore  *user.Store
 }
 
-type InteractionCreateHandler func(s *discordgo.Session, i *discordgo.InteractionCreate)
-type Middleware func(s *discordgo.Session, i *discordgo.InteractionCreate, next InteractionCreateHandler)
+type (
+	InteractionCreateHandler func(s *discordgo.Session, i *discordgo.InteractionCreate)
+	Middleware               func(s *discordgo.Session, i *discordgo.InteractionCreate, next InteractionCreateHandler)
+)
 
 func init() {
 	flag.StringVar(&Token, "t", "", "Bot Token")
@@ -84,8 +86,8 @@ func NewHypeBot(db *sql.DB) (hb *HypeBot, err error) {
 	}, nil
 }
 
-func (hb *HypeBot) respondCmdProcessing(s *discordgo.Session, i *discordgo.InteractionCreate, name string) {
-	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+func (hb *HypeBot) respondCmdProcessing(s *discordgo.Session, i *discordgo.InteractionCreate, name string) error {
+	return s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
 			Flags:   discordgo.MessageFlagsEphemeral,
@@ -94,7 +96,7 @@ func (hb *HypeBot) respondCmdProcessing(s *discordgo.Session, i *discordgo.Inter
 	})
 }
 
-func (hb *HypeBot) respondCmdDisabled(s *discordgo.Session, i *discordgo.InteractionCreate, name string) {
+func (hb *HypeBot) respondCmdDisabled(s *discordgo.Session, i *discordgo.InteractionCreate, name string) error {
 	message := fmt.Sprintf("The `%s` command is currently disabled 🚫.", name)
 	_, err := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
 		Content: &message,
@@ -104,6 +106,8 @@ func (hb *HypeBot) respondCmdDisabled(s *discordgo.Session, i *discordgo.Interac
 			Content: "Something went wrong ❌",
 		})
 	}
+
+	return err
 }
 
 func (hb *HypeBot) isCommandDisabled(name string) bool {

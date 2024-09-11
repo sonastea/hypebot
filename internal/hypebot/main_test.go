@@ -77,9 +77,9 @@ func TestInitGuildStore(t *testing.T) {
 }
 
 func TestIsCommandDisabled(t *testing.T) {
-  cmdName := "test-name"
+	cmdName := "test-name"
 	hb := &HypeBot{
-    disabledCommands: map[string]bool{cmdName: true},
+		disabledCommands: map[string]bool{cmdName: true},
 	}
 
 	cmd := hb.isCommandDisabled(cmdName)
