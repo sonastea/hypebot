@@ -9,6 +9,7 @@ services:
       context: .
       args:
         TOKEN: ${TOKEN}
+        POToken: ${POToken}
         DISABLED_COMMANDS: ${DISABLED_COMMANDS}
       dockerfile: ./docker/hypebot/Dockerfile
     logging:
@@ -19,6 +20,7 @@ services:
     networks: ["caddy_default"]
     environment:
       - TOKEN
+      - POToken
       - DISABLED_COMMANDS
     volumes:
       - "./songs:/app/songs"
