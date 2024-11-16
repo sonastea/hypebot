@@ -117,6 +117,7 @@ jobs:
           key: ${{ secrets.VPS_PRIVATE_KEY }}
           script: |
             cd $(pwd)/hypebot
+            export POToken=${POToken}
             git restore .
             git pull
 
