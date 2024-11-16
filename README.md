@@ -25,10 +25,12 @@ Building the image
 
 Run the image in a container
 
-1. Create an .env file with these two variables: `TOKEN` & `GUILD_ID`.
-2. Use your discord bot token for "TOKEN" and your discord server's id for "GUILD_ID".
-3. Create a docker container from the hypebot image with `docker run --env-file .env -d hypebot`.
-4. Docker hypebot container should be running in the background.
+1. Create an .env file with these three variables: `TOKEN`, `GUILD_ID`, `POToken`.
+2. Follow this [guide](https://github.com/yt-dlp/yt-dlp/wiki/Extractors#manually-acquiring-a-po-token-from-a-browser-for-use-when-logged-in) to get your POToken to circumvent youtube's warnings.
+3. Then follow this [guide](https://github.com/yt-dlp/yt-dlp/issues/10927#issuecomment-2332602512) to export your cookies as cookies.txt in the root folder.
+4. Use your discord bot token for "TOKEN" and your discord server's id for "GUILD_ID".
+5. Create a docker container from the hypebot image with `docker run --env-file .env -d hypebot`.
+6. Docker hypebot container should be running in the background.
    > Name your container with `docker run --env-file .env -d --name <container_name> hypebot`.
 
 ## Contact Me

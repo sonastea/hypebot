@@ -67,6 +67,13 @@ func (mhb *MockedHypeBot) InitGuildStore() {
 	}
 }
 
+func TestSetupEnv(t *testing.T) {
+	t.Setenv("POToken", "POTokenValue")
+	setupEnv()
+
+	assert.Equalf(t, "POTokenValue", POToken, "POToken should be POTokenValue")
+}
+
 func TestInitGuildStore(t *testing.T) {
 	mhb.InitGuildStore()
 	assert.Exactly(t, 1, len(mhb.guildCacheStore), "guild store should have 1 guild")

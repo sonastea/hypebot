@@ -22,12 +22,15 @@ yt-dlp
 # Go workspace file
 go.work
 
-#Environment variables
+# Environment variables
 .env
 .envrc
 
-#Database files
+# Database files
 *.db
 
-#Songs folders
+# Songs folders
 /songs
+
+# Used to pass to yt-dlp
+cookies.txt

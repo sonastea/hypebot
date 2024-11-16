@@ -123,6 +123,8 @@ func (hb *HypeBot) downloadVideo(url string, start_time string, duration string)
 		args := []string{
 			url,
 			"--extract-audio",
+			"--extractor-args", fmt.Sprintf("youtube:player-client=web;po_token=web+%s", POToken),
+			"--cookies", "cookies.txt",
 			"--ignore-errors",
 			"--audio-format", "opus",
 			"--max-downloads", "1",

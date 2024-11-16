@@ -19,6 +19,7 @@ import (
 // Variables used for command line parameters
 var (
 	Token           string
+	POToken         string
 	BotID           string
 	GuildID         string
 	DisableCommands string
@@ -42,6 +43,14 @@ type (
 	Middleware               func(s *discordgo.Session, i *discordgo.InteractionCreate, next InteractionCreateHandler)
 )
 
+func setupEnv() {
+	POToken = os.Getenv("POToken")
+
+	if len(strings.TrimSpace(POToken)) == 0 {
+		panic("Environment variable POToken is required")
+	}
+}
+
 func init() {
 	flag.StringVar(&Token, "t", "", "Bot Token")
 	flag.StringVar(&BotID, "bid", "994803132259381291", "User ID of bot")
@@ -64,6 +73,7 @@ func applyMiddlewares(handler InteractionCreateHandler, middlewares []Middleware
 
 func NewHypeBot(db *sql.DB) (hb *HypeBot, err error) {
 	flag.Parse()
+	setupEnv()
 
 	// Create discordgo session using a bot token
 	dg, err := discordgo.New("Bot " + Token)
