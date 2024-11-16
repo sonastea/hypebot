@@ -2,6 +2,7 @@
 
 FROM golang:1.23-alpine AS builder
 
+ARG POToken
 ENV PATH="${PATH}:/app/"
 ENV POToken=$POToken
 
@@ -21,6 +22,7 @@ RUN go build ./cmd/hypebot/ && chmod +x /app/yt-dlp
 
 FROM alpine:3.20
 
+ARG POToken
 ENV PATH="${PATH}:/app/"
 ENV POToken=$POToken
 
@@ -33,4 +35,4 @@ RUN mkdir -p /app/songs/
 
 WORKDIR /app
 
-CMD ["sh", "-c", "./hypebot --t=$TOKEN --discmds=$DISABLED_COMMANDS"]
+CMD ["sh", "-c", "./hypebot -e POToken=$POToken --t=$TOKEN --discmds=$DISABLED_COMMANDS"]
