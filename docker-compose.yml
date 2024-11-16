@@ -20,7 +20,7 @@ services:
     networks: ["caddy_default"]
     environment:
       - TOKEN
-      - POToken
+      - POToken=${POToken}
       - DISABLED_COMMANDS
     volumes:
       - "./songs:/app/songs"
