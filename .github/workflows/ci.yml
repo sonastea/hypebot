@@ -37,6 +37,8 @@ jobs:
     needs: tests
     if: startsWith(github.ref, 'refs/tags/v') && github.ref_type == 'tag'
     runs-on: ubuntu-latest
+    env:
+      POToken: ${{ secrets.POToken }}
     permissions:
       contents: read
       packages: write
@@ -117,7 +119,6 @@ jobs:
           key: ${{ secrets.VPS_PRIVATE_KEY }}
           script: |
             cd $(pwd)/hypebot
-            export POToken=${POToken}
             git restore .
             git pull
 
