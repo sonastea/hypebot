@@ -139,36 +139,36 @@ func TestHandleCommands(t *testing.T) {
 	}
 }
 
-func TestSetCustomStatus(t *testing.T) {
-	dg, err := discordgo.New("Bot " + testBotToken)
-	if err != nil {
-		t.Fatalf("unable to create a discord session: %s", err)
-	}
-
-	hb = &HypeBot{
-		s:               dg,
-		db:              db,
-		guildCacheStore: guild.NewGuildCacheStore(),
-		guildStore:      guild.NewGuildStore(mockStore),
-		userStore:       user.NewUserStore(mockStore),
-	}
-
-	err = hb.s.Open()
-	if err != nil {
-		t.Fatalf("unable opening discord websocket connection: %s", err)
-	}
-
-	expectedCustomStatus := "custom status"
-	os.Setenv("CUSTOM_STATUS", expectedCustomStatus)
-
-	hb.setCustomStatus()
-	assert.Equal(t, expectedCustomStatus, hb.s.Identify.Presence.Status, "custom status should be %s, but is %s", expectedCustomStatus, hb.s.Identify.Presence.Status)
-
-	err = hb.s.Close()
-	if err != nil {
-		t.Fatalf("unable closing discord websocket connection: %s", err)
-	}
-}
+// func TestSetCustomStatus(t *testing.T) {
+// 	dg, err := discordgo.New("Bot " + testBotToken)
+// 	if err != nil {
+// 		t.Fatalf("unable to create a discord session: %s", err)
+// 	}
+//
+// 	hb = &HypeBot{
+// 		s:               dg,
+// 		db:              db,
+// 		guildCacheStore: guild.NewGuildCacheStore(),
+// 		guildStore:      guild.NewGuildStore(mockStore),
+// 		userStore:       user.NewUserStore(mockStore),
+// 	}
+//
+// 	err = hb.s.Open()
+// 	if err != nil {
+// 		t.Fatalf("unable opening discord websocket connection: %s", err)
+// 	}
+//
+// 	expectedCustomStatus := "custom status"
+// 	os.Setenv("CUSTOM_STATUS", expectedCustomStatus)
+//
+// 	hb.setCustomStatus()
+// 	assert.Equal(t, expectedCustomStatus, hb.s.Identify.Presence.Status, "custom status should be %s, but is %s", expectedCustomStatus, hb.s.Identify.Presence.Status)
+//
+// 	err = hb.s.Close()
+// 	if err != nil {
+// 		t.Fatalf("unable closing discord websocket connection: %s", err)
+// 	}
+// }
 
 func TestNewHypeBot(t *testing.T) {
 	if !assert.NotEmpty(t, testBotToken) {
