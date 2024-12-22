@@ -6,7 +6,7 @@ ARG POToken
 ENV PATH="${PATH}:/app/"
 ENV POToken=$POToken
 
-RUN apk add --no-cache build-base=0.5-r3 bash=5.2.26-r0
+RUN apk add --no-cache build-base=0.5-r3 bash=5.2.37-r0
 
 WORKDIR /app
 
@@ -26,7 +26,7 @@ ARG POToken
 ENV PATH="${PATH}:/app/"
 ENV POToken=$POToken
 
-RUN apk add --no-cache ffmpeg=6.1.1-r8 python3=3.12.7-r0
+RUN apk add --no-cache ffmpeg=6.1.1-r8 python3=3.12.8-r1
 
 COPY --from=builder /app/hypebot /app/hypebot
 COPY --from=builder /app/yt-dlp /app/yt-dlp
