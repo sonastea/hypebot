@@ -40,15 +40,15 @@ func TestMain(m *testing.M) {
 }
 
 func TestAdd(t *testing.T) {
-  mock.ExpectPrepare(`INSERT OR IGNORE INTO Guild \(UID\) VALUES \(\?\);`).
-    ExpectExec().
-  WithArgs(guild.UID).
-  WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectPrepare(`INSERT OR IGNORE INTO Guild \(UID\) VALUES \(\?\);`).
+		ExpectExec().
+		WithArgs(guild.UID).
+		WillReturnResult(sqlmock.NewResult(1, 1))
 
-  guildStore.Add(guild.UID)
+	guildStore.Add(guild.UID)
 
-  err := mock.ExpectationsWereMet()
-  assert.NoError(t, err)
+	err := mock.ExpectationsWereMet()
+	assert.NoError(t, err)
 }
 
 func TestFind(t *testing.T) {

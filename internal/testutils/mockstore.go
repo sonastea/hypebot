@@ -11,5 +11,5 @@ func (ms *MockStore) DB() *sql.DB {
 }
 
 func NewMockStore(db *sql.DB) *MockStore {
-  return &MockStore{db: db}
+	return &MockStore{db: db}
 }

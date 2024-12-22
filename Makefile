@@ -17,3 +17,8 @@ run-server: build-server
 
 clean:
 	rm -f hypeserver hypebot
+
+.PHONY: tidy
+tidy:
+	gofumpt -l -d .
+	go mod tidy -v

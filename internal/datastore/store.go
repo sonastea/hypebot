@@ -26,7 +26,7 @@ func New(db *sql.DB) (*Store, error) {
 
 	err := db.Ping()
 	if err != nil {
-    log.Printf("%v: %v", ERROR_CONNECTION_ERROR, err)
+		log.Printf("%v: %v", ERROR_CONNECTION_ERROR, err)
 		return nil, errors.New(ERROR_CONNECTION_ERROR)
 	}
 

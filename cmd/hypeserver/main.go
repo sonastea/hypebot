@@ -16,7 +16,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
-  store, err := datastore.New(db)
+	store, err := datastore.New(db)
 	if err != nil {
 		log.Fatalln(err)
 	}

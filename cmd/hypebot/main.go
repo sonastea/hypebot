@@ -23,13 +23,13 @@ func main() {
 		log.Fatal()
 	}
 
-  defer close(botChan)
+	defer close(botChan)
 
 	select {
 	case <-botChan:
-    log.Println("Received stop signal, shutting down hypebot...")
+		log.Println("Received stop signal, shutting down hypebot...")
 		if err := b.Stop(); err != nil {
-      log.Fatalf("Error while stopping hypebot: %v", err)
-    }
+			log.Fatalf("Error while stopping hypebot: %v", err)
+		}
 	}
 }

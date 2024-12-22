@@ -98,7 +98,7 @@ func (gs *Store) Get(guild_id string) *Guild {
 		return nil
 	}
 
-	var guild = &Guild{
+	guild := &Guild{
 		VCS: make(map[string][]string),
 	}
 

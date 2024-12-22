@@ -23,7 +23,7 @@ type UserStore interface {
 }
 
 type Store struct {
-  datastore.BaseStore
+	datastore.BaseStore
 }
 
 var _ UserStore = &Store{}
@@ -47,7 +47,7 @@ func (us *Store) Add(user User) {
 	if err != nil {
 		log.Println(err)
 	}
-  defer stmt.Close()
+	defer stmt.Close()
 
 	res, err := stmt.Exec(user.Guild_ID, user.UID)
 	if err != nil {
@@ -58,7 +58,6 @@ func (us *Store) Add(user User) {
 	if err != nil {
 		log.Println(err)
 	}
-
 
 	// Check if user was added because it didn't exist
 	if rows > 0 {
