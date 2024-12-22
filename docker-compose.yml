@@ -44,6 +44,7 @@ services:
       - hypebot
     volumes:
       - "./hypebase.db:/app/hypebase.db:ro"
+      - "./cookies.txt:/app/cookies.txt:ro"
 
 networks:
   caddy_default:
