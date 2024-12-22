@@ -188,6 +188,13 @@ func (hb *HypeBot) initGuildStore() {
 	}
 }
 
+func (hb *HypeBot) setCustomStatus() {
+	err := hb.s.UpdateCustomStatus(os.Getenv("CUSTOM_STATUS"))
+	if err != nil {
+		log.Println("Error setting custom status:", err)
+	}
+}
+
 func (hb *HypeBot) Run() chan os.Signal {
 	// Create websocket connection to discord with the discord session
 	err := hb.s.Open()
@@ -202,12 +209,13 @@ func (hb *HypeBot) Run() chan os.Signal {
 
 	hb.initGuildStore()
 	hb.handleCommands()
+	hb.setCustomStatus()
 
 	hb.s.AddHandler(hb.listenVoiceStateUpdate)
 	hb.s.AddHandler(hb.listenOnJoinServer)
 	hb.s.AddHandler(hb.listenOnLeaveServer)
 
-	log.Printf("HypeBot #%v is now running. Press CTRL-C to exit.\n", hb.s.State.User.Discriminator)
+	log.Printf("%v #%v is now running. Press CTRL-C to exit.\n", hb.s.State.User.Username, hb.s.State.User.Discriminator)
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
@@ -237,7 +245,7 @@ func (hb *HypeBot) Stop() error {
 		}
 	}
 
-	log.Printf("HypeBot #%v has gracefully shut down. \n", hb.s.State.User.Discriminator)
+	log.Printf("%v #%v has gracefully shut down. \n", hb.s.State.User.Username, hb.s.State.User.Discriminator)
 
 	return nil
 }

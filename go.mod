@@ -4,7 +4,7 @@ go 1.23
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
-	github.com/bwmarrin/discordgo v0.28.1
+	github.com/bwmarrin/discordgo v0.28.2-0.20241208071600-33ffff21d31a
 	github.com/google/uuid v1.6.0
 	github.com/robrotheram/dca v0.0.0-20240103231016-764e174aecab
 	github.com/stretchr/testify v1.8.2
