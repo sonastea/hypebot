@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
@@ -31,6 +32,7 @@ type HypeBot struct {
 
 	s  *discordgo.Session
 	db *sql.DB
+	mu sync.Mutex
 
 	guildCacheStore guild.CacheStore
 
@@ -46,8 +48,10 @@ type (
 func setupEnv() {
 	POToken = os.Getenv("POToken")
 
-	if len(strings.TrimSpace(POToken)) == 0 {
-		panic("Environment variable POToken is required")
+	if len(strings.TrimSpace(POToken)) > 0 {
+		if _, err := os.Stat("cookies.txt"); os.IsNotExist(err) {
+			panic("cookies.txt is required when using POToken")
+		}
 	}
 }
 
@@ -196,6 +200,9 @@ func (hb *HypeBot) setCustomStatus() {
 }
 
 func (hb *HypeBot) Run() chan os.Signal {
+	hb.mu.Lock()
+	defer hb.mu.Unlock()
+
 	// Create websocket connection to discord with the discord session
 	err := hb.s.Open()
 	if err != nil {
