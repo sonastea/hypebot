@@ -3,8 +3,10 @@
 FROM golang:1.23-alpine AS builder
 
 ARG POToken
+ARG PROXY_URL
 ENV PATH="${PATH}:/app/"
 ENV POToken=$POToken
+ENV PROXY_URL=$PROXY_URL
 
 RUN apk add --no-cache build-base=0.5-r3 bash=5.2.37-r0
 
@@ -23,8 +25,10 @@ RUN go build ./cmd/hypebot/ && chmod +x /app/yt-dlp
 FROM alpine:3.20
 
 ARG POToken
+ARG PROXY_URL
 ENV PATH="${PATH}:/app/"
 ENV POToken=$POToken
+ENV PROXY_URL=$PROXY_URL
 
 RUN apk add --no-cache ffmpeg=6.1.1-r8 python3=3.12.8-r1
 

@@ -29,6 +29,7 @@ Run the image in a container
    - `TOKEN`    - Your discord bot token.
    - `GUILD_ID` - Your discord server id.
    - `POToken`  - Proof of Origin token. *(Optional)*
+   - `PROXY_URL` – A proxy url to use when making requests. *(Optional)*
    - `CUSTOM_STATUS` – The custom status message for your bot. *(Optional)*
 
    <br>
