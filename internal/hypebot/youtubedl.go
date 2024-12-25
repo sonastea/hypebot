@@ -120,23 +120,7 @@ func (hb *HypeBot) downloadVideo(url string, start_time string, duration string)
 		opusFileComp := songsDir + fileNameComp + ".opus"
 		filePath = fmt.Sprintf("./songs/%s.dca", fileName)
 
-		args := []string{
-			url,
-			"--extract-audio",
-			"--extractor-args", fmt.Sprintf("youtube:player-client=web;po_token=web+%s", POToken),
-			"--cookies", "cookies.txt",
-			"--ignore-errors",
-			"--audio-format", "opus",
-			"--max-downloads", "1",
-			"--no-playlist",
-			"--no-color",
-			"--no-check-formats",
-			"--print-json",
-			"--quiet",
-			"--output", fmt.Sprintf("%s", opusFile),
-			"--downloader", "ffmpeg",
-			"--downloader-args", fmt.Sprintf("ffmpeg:-ss %s -t %s -b:a 96k", start_time, duration),
-		}
+		args := buildArgs(url, opusFile, start_time, duration)
 
 		cmd := exec.Command(ytdl, args...)
 		if data, err := cmd.Output(); err != nil && err.Error() != "exit status 101" {
@@ -253,7 +237,7 @@ func (hb *HypeBot) validateUrl(url string) (valid bool, err error) {
 	if err = cmd.Run(); err != nil && err.Error() != "exit status 101" {
 		dlerr := string(bytes.Split(stderr.Bytes(), []byte(":"))[2])
 		log.Printf("{yt-dlp}-not_live: %v -%v \n", err, dlerr)
-		return false, fmt.Errorf(fmt.Sprint(dlerr, ":warning:"))
+		return false, fmt.Errorf("%v :warning:", dlerr)
 	}
 
 	if bytes.Contains(stdout.Bytes(), []byte("duration < 600")) {
@@ -261,4 +245,32 @@ func (hb *HypeBot) validateUrl(url string) (valid bool, err error) {
 	}
 
 	return true, nil
+}
+
+func buildArgs(url, opusFile, start_time, duration string) []string {
+	args := []string{
+		url,
+		"--extract-audio",
+		"--ignore-errors",
+		"--audio-format", "opus",
+		"--max-downloads", "1",
+		"--no-playlist",
+		"--no-color",
+		"--no-check-formats",
+		"--print-json",
+		"--quiet",
+		"--output", fmt.Sprintf("%s", opusFile),
+		"--downloader", "ffmpeg",
+		"--downloader-args", fmt.Sprintf("ffmpeg:-ss %s -t %s -b:a 96k", start_time, duration),
+	}
+
+	if len(strings.TrimSpace(POToken)) > 0 {
+		extractorArgs := fmt.Sprintf("youtube:player-client=web;po_token=web+%s", POToken)
+		args = append(args,
+			"--extractor-args", extractorArgs,
+			"--cookies", "cookies.txt",
+		)
+	}
+
+	return args
 }

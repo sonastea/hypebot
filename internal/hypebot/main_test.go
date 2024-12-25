@@ -68,6 +68,12 @@ func (mhb *MockedHypeBot) InitGuildStore() {
 }
 
 func TestSetupEnv(t *testing.T) {
+	tempFile, err := os.Create("cookies.txt")
+	if err != nil {
+		t.Fatalf("Failed to create temporary cookies.txt file: %v", err)
+	}
+	defer os.Remove(tempFile.Name())
+
 	t.Setenv("POToken", "POTokenValue")
 	setupEnv()
 
