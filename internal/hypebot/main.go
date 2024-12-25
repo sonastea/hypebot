@@ -21,6 +21,7 @@ import (
 var (
 	Token           string
 	POToken         string
+	ProxyURL        string
 	BotID           string
 	GuildID         string
 	DisableCommands string
@@ -47,6 +48,7 @@ type (
 
 func setupEnv() {
 	POToken = os.Getenv("POToken")
+	ProxyURL = os.Getenv("PROXY_URL")
 
 	if len(strings.TrimSpace(POToken)) > 0 {
 		if _, err := os.Stat("cookies.txt"); os.IsNotExist(err) {

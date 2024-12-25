@@ -10,6 +10,7 @@ services:
       args:
         TOKEN: ${TOKEN}
         POToken: ${POToken}
+        PROXY_URL: ${PROXY_URL}
         DISABLED_COMMANDS: ${DISABLED_COMMANDS}
       dockerfile: ./docker/hypebot/Dockerfile
     logging:
@@ -21,6 +22,7 @@ services:
     environment:
       - TOKEN
       - POToken
+      - PROXY_URL
       - DISABLED_COMMANDS
     volumes:
       - "./songs:/app/songs"

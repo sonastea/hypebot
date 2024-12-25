@@ -258,6 +258,7 @@ func buildArgs(url, opusFile, start_time, duration string) []string {
 		"--no-color",
 		"--no-check-formats",
 		"--print-json",
+		"--proxy", ProxyURL,
 		"--quiet",
 		"--output", fmt.Sprintf("%s", opusFile),
 		"--downloader", "ffmpeg",

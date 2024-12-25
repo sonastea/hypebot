@@ -74,10 +74,14 @@ func TestSetupEnv(t *testing.T) {
 	}
 	defer os.Remove(tempFile.Name())
 
-	t.Setenv("POToken", "POTokenValue")
+	expectedPOToken := "POTokenValue"
+	expectedProxyURL := "http://PROXYURLVALUE"
+	t.Setenv("POToken", expectedPOToken)
+	t.Setenv("PROXY_URL", expectedProxyURL)
 	setupEnv()
 
-	assert.Equalf(t, "POTokenValue", POToken, "POToken should be POTokenValue")
+	assert.Equalf(t, expectedPOToken, POToken, "POToken should be POTokenValue, got %v", POToken)
+	assert.Equalf(t, expectedProxyURL, ProxyURL, "ProxyURl should be http://PROXYURLVALUE, got %v", ProxyURL)
 }
 
 func TestInitGuildStore(t *testing.T) {
