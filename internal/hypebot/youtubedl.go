@@ -88,7 +88,7 @@ func (hb *HypeBot) playThemesong(e *discordgo.VoiceStateUpdate, vc *discordgo.Vo
 	return nil
 }
 
-func (hb *HypeBot) downloadVideo(url string, start_time string, duration string) (file_path string, err error) {
+func (hb *HypeBot) downloadVideo(url, start_time, duration string) (file_path string, err error) {
 	var mu sync.Mutex
 	mu.Lock()
 	defer mu.Unlock()
@@ -96,23 +96,31 @@ func (hb *HypeBot) downloadVideo(url string, start_time string, duration string)
 
 	valid, err := hb.validateUrl(url)
 	if !valid {
+		log.Printf("It seems the url is not valid: %v", err)
 		return "", err
 	}
 
 	ytdl, err := exec.LookPath("yt-dlp")
 	if err != nil {
+		log.Printf("It seems like yt-dlp was not found: %v", err)
 		return "", err
 	} else {
 		dir, err := os.Getwd()
 		if err != nil {
+			log.Printf("It seems like the directory was not found: %v", err)
 			return "", err
 		}
+
+		log.Printf("dir is %v", dir)
 
 		// Create songs directory if it doesn't exist
 		songsDir := dir + "/songs/"
 		if _, err := os.Stat(songsDir); errors.Is(err, os.ErrNotExist) {
 			err := os.Mkdir(songsDir, os.ModePerm)
-			return "", err
+			if err != nil {
+				log.Printf("It seems like the directory could not be created: %v", err)
+				return "", err
+			}
 		}
 		fileName := uuid.New().String()
 		fileNameComp := uuid.New().String()
@@ -150,6 +158,7 @@ func (hb *HypeBot) downloadVideo(url string, start_time string, duration string)
 
 			fmpg, err := exec.LookPath("ffmpeg")
 			if err != nil {
+				log.Printf("ffmpeg not found in $PATH: %v", err)
 				return "", err
 			}
 			args := []string{
@@ -214,6 +223,7 @@ func (hb *HypeBot) validateUrl(url string) (valid bool, err error) {
 		"--match-filter",
 		"!is_live",
 		"--simulate",
+		"--proxy", ProxyURL,
 	}
 
 	var stdout, stderr bytes.Buffer
@@ -250,6 +260,7 @@ func (hb *HypeBot) validateUrl(url string) (valid bool, err error) {
 func buildArgs(url, opusFile, start_time, duration string) []string {
 	args := []string{
 		url,
+		"-v",
 		"--extract-audio",
 		"--ignore-errors",
 		"--audio-format", "opus",
