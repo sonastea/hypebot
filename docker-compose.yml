@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   hypebot:
     container_name: hypebot
@@ -27,6 +25,7 @@ services:
     volumes:
       - "./songs:/app/songs"
       - "./hypebase.db:/app/hypebase.db"
+      - "./cookies.txt:/app/cookies.txt:ro"
 
   hypeserver:
     container_name: hypeserver
@@ -46,7 +45,6 @@ services:
       - hypebot
     volumes:
       - "./hypebase.db:/app/hypebase.db:ro"
-      - "./cookies.txt:/app/cookies.txt:ro"
 
 networks:
   caddy_default:
