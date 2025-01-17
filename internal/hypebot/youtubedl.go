@@ -111,8 +111,6 @@ func (hb *HypeBot) downloadVideo(url, start_time, duration string) (file_path st
 			return "", err
 		}
 
-		log.Printf("dir is %v", dir)
-
 		// Create songs directory if it doesn't exist
 		songsDir := dir + "/songs/"
 		if _, err := os.Stat(songsDir); errors.Is(err, os.ErrNotExist) {
