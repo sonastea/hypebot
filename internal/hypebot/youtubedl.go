@@ -104,100 +104,104 @@ func (hb *HypeBot) downloadVideo(url, start_time, duration string) (file_path st
 	if err != nil {
 		log.Printf("It seems like yt-dlp was not found: %v", err)
 		return "", err
-	} else {
-		dir, err := os.Getwd()
+	}
+	dir, err := os.Getwd()
+	if err != nil {
+		log.Printf("It seems like the directory was not found: %v", err)
+		return "", err
+	}
+
+	// Create songs directory if it doesn't exist
+	songsDir := dir + "/songs/"
+	if _, err := os.Stat(songsDir); errors.Is(err, os.ErrNotExist) {
+		err := os.Mkdir(songsDir, os.ModePerm)
 		if err != nil {
-			log.Printf("It seems like the directory was not found: %v", err)
+			log.Printf("It seems like the directory could not be created: %v", err)
 			return "", err
 		}
-
-		// Create songs directory if it doesn't exist
-		songsDir := dir + "/songs/"
-		if _, err := os.Stat(songsDir); errors.Is(err, os.ErrNotExist) {
-			err := os.Mkdir(songsDir, os.ModePerm)
-			if err != nil {
-				log.Printf("It seems like the directory could not be created: %v", err)
-				return "", err
-			}
-		}
-		fileName := uuid.New().String()
-		fileNameComp := uuid.New().String()
-		opusFile := songsDir + fileName + ".opus"
-		opusFileComp := songsDir + fileNameComp + ".opus"
-		filePath = fmt.Sprintf("./songs/%s.dca", fileName)
-
-		args := buildArgs(url, opusFile, start_time, duration)
-
-		cmd := exec.Command(ytdl, args...)
-		if data, err := cmd.Output(); err != nil && err.Error() != "exit status 101" {
-			log.Printf("{yt-dlp}-unhandled: %v (%v, %v, %v) \n", err, url, start_time, duration)
-			return "", fmt.Errorf("There was an error processing your request ⚠️")
-		} else {
-			if len(data) < 1 {
-				log.Printf("{yt-dlp}-no_data: %v (%v, %v, %v) \n", err, url, start_time, duration)
-				return "", fmt.Errorf("Unable to retrieve requested audio ⚠️")
-			}
-
-			videoMetaData := VideoMetaData{}
-			err = json.Unmarshal(data, &videoMetaData)
-			if err != nil {
-				return "", err
-			}
-
-			// Check for valid start time
-			st, err := strconv.ParseUint(start_time, 10, 64)
-			if err != nil {
-				return "", err
-			}
-
-			if st < 0 || st > videoMetaData.Duration {
-				return "", fmt.Errorf("Invalid start time ⚠️")
-			}
-
-			fmpg, err := exec.LookPath("ffmpeg")
-			if err != nil {
-				log.Printf("ffmpeg not found in $PATH: %v", err)
-				return "", err
-			}
-			args := []string{
-				"-i",
-				opusFile,
-				"-filter:a",
-				"loudnorm",
-				opusFileComp,
-			}
-
-			cmd = exec.Command(fmpg, args...)
-			btt, err := cmd.CombinedOutput()
-			if err != nil {
-				log.Println(string(btt))
-				return "", err
-			}
-
-			// Convert opus to dca so we can send to discord voice
-			log.Println("Converting " + fileName + ".opus to " + fileName + ".dca")
-			encodeSession, _ := dca.EncodeFile(opusFileComp, dca.StdEncodeOptions)
-			defer encodeSession.Cleanup()
-
-			dcaFile, err := os.Create(songsDir + fileName + ".dca")
-			if err != nil {
-				log.Println(err)
-			}
-			io.Copy(dcaFile, encodeSession)
-
-			del := exec.Command("rm", opusFile)
-			if del.Run() != nil {
-				log.Println(err)
-			}
-
-			del = exec.Command("rm", opusFileComp)
-			if del.Run() != nil {
-				log.Println(err)
-			}
-
-			log.Printf("Created theme song: %v • %v.dca \n", videoMetaData.Title, fileName)
-		}
 	}
+	fileName := uuid.New().String()
+	fileNameComp := uuid.New().String()
+	opusFile := songsDir + fileName + ".opus"
+	opusFileComp := songsDir + fileNameComp + ".opus"
+	filePath = fmt.Sprintf("./songs/%s.dca", fileName)
+
+	args := buildArgs(url, fileName+".opus", start_time, duration)
+	cmd := exec.Command(ytdl, args...)
+	data, err := cmd.Output()
+	if err != nil && err.Error() != "exit status 101" {
+		log.Printf("{yt-dlp}-unhandled: %v (%v, %v, %v) \n", err, url, start_time, duration)
+		return "", fmt.Errorf("There was an error processing your request ⚠️")
+	}
+
+	if len(data) < 1 {
+		log.Printf("{yt-dlp}-no_data: %v (%v, %v, %v) \n", err, url, start_time, duration)
+		return "", fmt.Errorf("Unable to retrieve requested audio ⚠️")
+	}
+
+	videoMetaData := VideoMetaData{}
+	err = json.Unmarshal(data, &videoMetaData)
+	if err != nil {
+		return "", err
+	}
+
+	// Check for valid start time
+	st, err := strconv.ParseUint(start_time, 10, 64)
+	if err != nil {
+		return "", err
+	}
+
+	if st < 0 || st > videoMetaData.Duration {
+		return "", fmt.Errorf("Invalid start time ⚠️")
+	}
+
+	fmpg, err := exec.LookPath("ffmpeg")
+	if err != nil {
+		log.Printf("ffmpeg not found in $PATH: %v", err)
+		return "", err
+	}
+	args = []string{
+		"-i",
+		opusFile,
+		"-filter:a",
+		"loudnorm",
+		opusFileComp,
+	}
+
+	cmd = exec.Command(fmpg, args...)
+	btt, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Printf("error while running ffmpeg: %v (%v)", err, string(btt))
+		return "", err
+	}
+
+	// Convert opus to dca so we can send to discord voice
+	log.Println("Converting " + fileName + ".opus to " + fileName + ".dca")
+	encodeSession, _ := dca.EncodeFile(opusFileComp, dca.StdEncodeOptions)
+	defer encodeSession.Cleanup()
+
+	dcaFile, err := os.Create(songsDir + fileName + ".dca")
+	if err != nil {
+		log.Println(err)
+	}
+
+	_, err = io.Copy(dcaFile, encodeSession)
+	if err != nil {
+		log.Printf("unable to write to %s: %v", songsDir+fileName+".dca", err)
+		return "", err
+	}
+
+	del := exec.Command("rm", opusFile)
+	if del.Run() != nil {
+		log.Println(err)
+	}
+
+	del = exec.Command("rm", opusFileComp)
+	if del.Run() != nil {
+		log.Println(err)
+	}
+
+	log.Printf("Created theme song: %v • %v.dca \n", videoMetaData.Title, fileName)
 
 	return filePath, nil
 }
@@ -219,9 +223,22 @@ func (hb *HypeBot) validateUrl(url string) (valid bool, err error) {
 		"--no-playlist",
 		"--no-check-formats",
 		"--match-filter",
-		"!is_live",
+		"!is_live & duration < 600",
 		"--simulate",
-		"--proxy", ProxyURL,
+	}
+
+	if len(strings.TrimSpace(ProxyURL)) > 0 {
+		args = append(args,
+			"--proxy", ProxyURL,
+		)
+	}
+
+	if len(strings.TrimSpace(POToken)) > 0 {
+		extractorArgs := fmt.Sprintf("youtube:player-client=web;po_token=web+%s", POToken)
+		args = append(args,
+			"--extractor-args", extractorArgs,
+			"--cookies", "cookies.txt",
+		)
 	}
 
 	var stdout, stderr bytes.Buffer
@@ -238,7 +255,6 @@ func (hb *HypeBot) validateUrl(url string) (valid bool, err error) {
 		return false, fmt.Errorf("Unable to process a live video :warning:")
 	}
 
-	args[6] = "duration < 600"
 	cmd = exec.Command(ytdl, args...)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -263,15 +279,21 @@ func buildArgs(url, opusFile, start_time, duration string) []string {
 		"--ignore-errors",
 		"--audio-format", "opus",
 		"--max-downloads", "1",
+		"--paths", "songs/",
 		"--no-playlist",
 		"--no-color",
 		"--no-check-formats",
 		"--print-json",
-		"--proxy", ProxyURL,
 		"--quiet",
 		"--output", fmt.Sprintf("%s", opusFile),
 		"--downloader", "ffmpeg",
 		"--downloader-args", fmt.Sprintf("ffmpeg:-ss %s -t %s -b:a 96k", start_time, duration),
+	}
+
+	if len(strings.TrimSpace(ProxyURL)) > 0 {
+		args = append(args,
+			"--proxy", ProxyURL,
+		)
 	}
 
 	if len(strings.TrimSpace(POToken)) > 0 {
