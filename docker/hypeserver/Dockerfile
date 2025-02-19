@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM golang:1.23-alpine AS builder
+FROM golang:1.24-alpine AS builder
 
 ENV PATH="${PATH}:/app/"
 
@@ -16,7 +16,7 @@ COPY . .
 
 RUN go build ./cmd/hypeserver/
 
-FROM alpine:3.20
+FROM alpine:3.21.3
 
 ENV PATH="${PATH}:/app/"
 

@@ -12,7 +12,7 @@ services:
         DISABLED_COMMANDS: ${DISABLED_COMMANDS}
       dockerfile: ./docker/hypebot/Dockerfile
     logging:
-      driver: syslog
+      driver: journald
       options:
         tag: "{{.Name}}"
     restart: unless-stopped
@@ -34,7 +34,7 @@ services:
       context: .
       dockerfile: ./docker/hypeserver/Dockerfile
     logging:
-      driver: syslog
+      driver: journald
       options:
         tag: "{{.Name}}"
     restart: unless-stopped

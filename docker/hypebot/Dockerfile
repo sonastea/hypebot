@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM golang:1.23-alpine AS builder
+FROM golang:1.24-alpine AS builder
 
 ARG POToken
 ARG PROXY_URL
@@ -22,7 +22,7 @@ COPY . .
 
 RUN go build ./cmd/hypebot/ && chmod +x /app/yt-dlp
 
-FROM alpine:3.20
+FROM alpine:3.21.3
 
 ARG POToken
 ARG PROXY_URL
@@ -30,7 +30,7 @@ ENV PATH="${PATH}:/app/"
 ENV POToken=$POToken
 ENV PROXY_URL=$PROXY_URL
 
-RUN apk add --no-cache ffmpeg=6.1.1-r8 python3=3.12.8-r1
+RUN apk add --no-cache ffmpeg=6.1.2-r1 python3=3.12.9-r0
 
 COPY --from=builder /app/hypebot /app/hypebot
 COPY --from=builder /app/yt-dlp /app/yt-dlp
