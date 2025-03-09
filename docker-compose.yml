@@ -25,7 +25,7 @@ services:
     volumes:
       - "./songs:/app/songs"
       - "./hypebase.db:/app/hypebase.db"
-      - "./cookies.txt:/app/cookies.txt:ro"
+      - "./cookies.txt:/app/cookies.txt"
 
   hypeserver:
     container_name: hypeserver
