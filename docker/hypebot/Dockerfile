@@ -30,7 +30,7 @@ ENV PATH="${PATH}:/app/"
 ENV POToken=$POToken
 ENV PROXY_URL=$PROXY_URL
 
-RUN apk add --no-cache ffmpeg=6.1.2-r1 python3=3.12.9-r0
+RUN apk add --no-cache ffmpeg=6.1.2-r1 python3=3.12.10-r1
 
 COPY --from=builder /app/hypebot /app/hypebot
 COPY --from=builder /app/yt-dlp /app/yt-dlp
