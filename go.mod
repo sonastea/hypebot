@@ -4,7 +4,7 @@ go 1.24
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
-	github.com/bwmarrin/discordgo v0.28.2-0.20241208071600-33ffff21d31a
+	github.com/bwmarrin/discordgo v0.29.0
 	github.com/google/uuid v1.6.0
 	github.com/robrotheram/dca v0.0.0-20240103231016-764e174aecab
 	github.com/stretchr/testify v1.8.2
@@ -19,7 +19,7 @@ require (
 
 require (
 	github.com/gorilla/websocket v1.5.3 // indirect
-	github.com/mattn/go-sqlite3 v1.14.27
-	golang.org/x/crypto v0.37.0 // indirect
-	golang.org/x/sys v0.32.0 // indirect
+	github.com/mattn/go-sqlite3 v1.14.28
+	golang.org/x/crypto v0.38.0 // indirect
+	golang.org/x/sys v0.33.0 // indirect
 )
