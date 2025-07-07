@@ -15,66 +15,44 @@ env:
   TEST_TOKEN: ${{ secrets.TEST_TOKEN }}
 
 jobs:
-  changes:
-    runs-on: ubuntu-latest
-    outputs:
-      hypebot: ${{ steps.changes.outputs.hypebot }}
-      hypeserver: ${{ steps.changes.outputs.hypeserver }}
-      common: ${{ steps.changes.outputs.common }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Check for changes
-        uses: dorny/paths-filter@v3
-        id: changes
-        with:
-          filters: |
-            hypebot:
-              - 'internal/hypebot/**'
-              - 'cmd/hypebot/**'
-              - 'docker/hypebot/**'
-              - 'go.mod'
-              - 'go.sum'
-            hypeserver:
-              - 'internal/hypeserver/**'
-              - 'cmd/hypeserver/**'
-              - 'docker/hypeserver/**'
-              - 'go.mod'
-              - 'go.sum'
-            common:
-              - 'internal/datastore/**'
-              - 'pkg/**'
-              - 'go.mod'
-              - 'go.sum'
-
   tests:
     runs-on: ubuntu-latest
-    needs: changes
-    if: needs.changes.outputs.hypebot == 'true' || needs.changes.outputs.hypeserver == 'true' || needs.changes.outputs.common == 'true'
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@5a083d0e9a84784eb32078397cf5459adecb4c40
         with:
           go-version: '1.24.x'
-          cache: true
 
       - name: Install dependencies
-        run: go mod download
+        run: go get ./...
 
       - name: Run go tests
         run: go test "./internal/..." -count=1
 
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      hypeserver: ${{ steps.filter.outputs.hypeserver }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check paths that matter to hypeserver build
+        id: filter
+        uses: dorny/paths-filter@v2
+        with:
+          filters: |
+            hypeserver:
+              - 'internal/hypeserver/**'
+              - 'internal/datastore/**'
+
   build-and-push-hypebot:
-    needs: [tests, changes]
-    if: |
-      startsWith(github.ref, 'refs/tags/v') && github.ref_type == 'tag'
+    needs: tests
+    if: startsWith(github.ref, 'refs/tags/v') && github.ref_type == 'tag'
     runs-on: ubuntu-latest
     env:
       CUSTOM_STATUS: ${{ secrets.CUSTOM_STATUS }}
@@ -87,11 +65,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@327cd5a69de6c009b9ce71bce8395f28e651bf99
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -99,27 +74,22 @@ jobs:
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804
         with:
           images: ghcr.io/sonastea/hypebot
 
       - name: Build and push hypebot docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@b89ff0a6f27deae3d7f5803e80f1de9415b673c8
         with:
           context: .
           file: ./docker/hypebot/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64
 
   build-and-push-hypeserver:
-    needs: [tests, changes]
-    if: |
-      (needs.changes.outputs.hypeserver == 'true' || needs.changes.outputs.common == 'true') &&
-      startsWith(github.ref, 'refs/tags/v') && github.ref_type == 'tag'
+    needs: tests
+    if: startsWith(github.ref, 'refs/tags/v') && github.ref_type == 'tag'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -129,47 +99,34 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@327cd5a69de6c009b9ce71bce8395f28e651bf99
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract metadata (tags, labels) for Docker
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804
         id: meta
         with:
           images: ghcr.io/sonastea/hypeserver
 
       - name: Build and push hypeserver docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@b89ff0a6f27deae3d7f5803e80f1de9415b673c8
         with:
           context: .
           file: ./docker/hypeserver/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64
 
   deployment:
     needs: [build-and-push-hypebot, build-and-push-hypeserver]
-    if: |
-      always() && 
-      (needs.build-and-push-hypebot.result == 'success' || 
-       needs.build-and-push-hypeserver.result == 'success' ||
-       needs.build-and-push-hypebot.result == 'skipped' || 
-       needs.build-and-push-hypeserver.result == 'skipped') &&
-      !contains(needs.*.result, 'failure')
     runs-on: ubuntu-latest
     steps:
       - name: Deploy and run docker container
-        uses: appleboy/ssh-action@v1.2.2
+        uses: appleboy/ssh-action@2ead5e36573f08b82fbfce1504f1a4b05a647c6f
         env:
           TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           POToken: ${{ secrets.POToken }}
