@@ -88,12 +88,9 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
 
   build-and-push-hypeserver:
-    needs: tests
-    if: startsWith(github.ref, 'refs/tags/v') && github.ref_type == 'tag'
+    needs: [tests, changes]
+    if: ${{ needs.changes.outputs.hypeserver == 'true' }}
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
 
     steps:
       - name: Checkout repository
