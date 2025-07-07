@@ -118,8 +118,8 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-  deployment:
-    needs: [build-and-push-hypebot, build-and-push-hypeserver]
+  deploy-hypebot:
+    needs: build-and-push-hypebot
     runs-on: ubuntu-latest
     steps:
       - name: Deploy and run docker container
@@ -146,5 +146,20 @@ jobs:
               fi
             fi
 
-            docker compose down --rmi local
-            docker compose up -d --force-recreate --pull always
+            docker compose up -d --no-deps --force-recreate --pull always hypebot
+
+  deploy-hypeserver:
+    needs: build-and-push-hypeserver
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy and run docker container
+        uses: appleboy/ssh-action@2ead5e36573f08b82fbfce1504f1a4b05a647c6f
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_PRIVATE_KEY }}
+          script: |
+            cd $(pwd)/hypebot
+            git restore .
+            git pull
+            docker compose up -d --no-deps --force-recreate --pull always hypeserver
