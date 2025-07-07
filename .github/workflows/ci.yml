@@ -74,7 +74,6 @@ jobs:
   build-and-push-hypebot:
     needs: [tests, changes]
     if: |
-      (needs.changes.outputs.hypebot == 'true' || needs.changes.outputs.common == 'true') &&
       startsWith(github.ref, 'refs/tags/v') && github.ref_type == 'tag'
     runs-on: ubuntu-latest
     env:
