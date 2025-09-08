@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM golang:1.24-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
 ARG POToken
 ARG PROXY_URL
@@ -12,7 +12,7 @@ RUN apk add --no-cache build-base=0.5-r3 bash=5.2.37-r0
 
 WORKDIR /app
 
-ADD https://github.com/yt-dlp/yt-dlp/releases/download/2025.07.21/yt-dlp /app/yt-dlp
+ADD https://github.com/yt-dlp/yt-dlp/releases/download/2025.09.05/yt-dlp /app/yt-dlp
 
 COPY go.mod .
 COPY go.sum .
