@@ -12,7 +12,7 @@ RUN apk add --no-cache build-base=0.5-r3 bash=5.2.37-r0
 
 WORKDIR /app
 
-ADD https://github.com/yt-dlp/yt-dlp/releases/download/2025.09.05/yt-dlp /app/yt-dlp
+ADD https://github.com/yt-dlp/yt-dlp/releases/download/2025.09.26/yt-dlp /app/yt-dlp
 
 COPY go.mod .
 COPY go.sum .
