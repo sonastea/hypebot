@@ -206,9 +206,23 @@ func TestNewHypeBot(t *testing.T) {
 }
 
 func TestRunAndStop(t *testing.T) {
-	botChan := hb.Run()
-	assert.NotNil(t, botChan, "unable to return chan os.Signal from running hypebot")
+	dg, err := discordgo.New("Bot " + testBotToken)
+	if err != nil {
+		t.Fatalf("unable to create a discord session: %s", err)
+	}
 
-	err := hb.Stop()
+	testHb := &HypeBot{
+		s:                dg,
+		db:               db,
+		guildCacheStore:  guild.NewGuildCacheStore(),
+		guildStore:       guild.NewGuildStore(mockStore),
+		userStore:        user.NewUserStore(mockStore),
+		disabledCommands: make(map[string]bool),
+	}
+
+	botChan := testHb.Run()
+	assert.NotNil(t, botChan, "unable to return os.Signal from running hypebot")
+
+	err = testHb.Stop()
 	assert.Nil(t, err, "unable to shut down hypebot gracefully: %v", err)
 }
