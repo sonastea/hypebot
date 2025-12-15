@@ -8,7 +8,7 @@ ENV PATH="${PATH}:/app/"
 ENV POToken=$POToken
 ENV PROXY_URL=$PROXY_URL
 
-RUN apk add --no-cache build-base=0.5-r3 bash=5.2.37-r0 unzip=6.0-r15
+RUN apk add --no-cache build-base=0.5-r3 bash=5.3.3-r1 unzip=6.0-r16
 
 WORKDIR /app
 
@@ -25,7 +25,7 @@ COPY . .
 
 RUN go build ./cmd/hypebot/ && chmod +x /app/yt-dlp && chmod +x /app/deno
 
-FROM alpine:3.22.1
+FROM alpine:3.23.0
 
 ARG POToken
 ARG PROXY_URL
@@ -33,7 +33,7 @@ ENV PATH="${PATH}:/app/"
 ENV POToken=$POToken
 ENV PROXY_URL=$PROXY_URL
 
-RUN apk add --no-cache ffmpeg=6.1.2-r2 python3=3.12.12-r0
+RUN apk add --no-cache ffmpeg=8.0.1-r0 python3=3.12.12-r0
 
 COPY --from=builder /app/hypebot /app/hypebot
 COPY --from=builder /app/yt-dlp /app/yt-dlp

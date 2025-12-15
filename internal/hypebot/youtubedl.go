@@ -2,6 +2,7 @@ package hypebot
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -18,6 +19,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/robrotheram/dca"
 	"github.com/sonastea/hypebot/internal/datastore/themesong"
+)
+
+const (
+	SEND_TIMEOUT        = 5 * time.Second
+	POST_PLAYBACK_DELAY = 1500 * time.Millisecond
 )
 
 type VideoMetaData struct {
@@ -44,45 +50,21 @@ func (hb *HypeBot) removeThemesong(guild_id string, user_id string) string {
 }
 
 func (hb *HypeBot) playThemesong(e *discordgo.VoiceStateUpdate, vc *discordgo.VoiceConnection) (err error) {
-	for len(hb.guildCacheStore[e.VoiceState.GuildID].VCS[e.ChannelID]) > 0 {
-		file, err := os.Open(hb.guildCacheStore[e.VoiceState.GuildID].VCS[e.ChannelID][0])
-		if err != nil {
-			log.Println(err)
-		}
-		defer file.Close()
+	guildID := e.VoiceState.GuildID
+	channelID := e.ChannelID
+	ctx := context.Background()
 
-		decoder := dca.NewDecoder(file)
-		_ = vc.Speaking(true)
-		for {
-			frame, err := decoder.OpusFrame()
-			if err != nil {
-				if err != io.EOF {
-					return err
-				}
-				break
-			}
-			select {
-			case vc.OpusSend <- frame:
-			case <-time.After(time.Second * 5):
-				break
-			}
+	for len(hb.getQueue(guildID, channelID)) > 0 {
+		if err := hb.playNextTrack(vc, guildID, channelID); err != nil {
+			return err
 		}
 
-		err = vc.Speaking(false)
-		if err != nil {
-			log.Println(err)
+		if !hb.advanceQueue(guildID, channelID) {
+			vc.Disconnect(ctx)
+			break
 		}
 
-		if len(hb.guildCacheStore[e.GuildID].VCS[e.ChannelID]) > 1 {
-			hb.guildCacheStore[e.GuildID].VCS[e.ChannelID] = hb.guildCacheStore[e.GuildID].VCS[e.ChannelID][1:]
-		} else if len(hb.guildCacheStore[e.GuildID].VCS[e.ChannelID]) == 1 {
-			time.Sleep(1500 * time.Millisecond)
-			hb.guildCacheStore[e.GuildID].VCS[e.ChannelID] = hb.guildCacheStore[e.VoiceState.GuildID].VCS[e.ChannelID][:0]
-			hb.guildCacheStore[e.GuildID].Playing = false
-			vc.Disconnect()
-		}
-
-		time.Sleep(1500 * time.Millisecond)
+		time.Sleep(POST_PLAYBACK_DELAY)
 	}
 
 	return nil
@@ -151,7 +133,7 @@ func (hb *HypeBot) downloadVideo(url, start_time, duration string) (file_path st
 		return "", err
 	}
 
-	if st < 0 || st > videoMetaData.Duration {
+	if st > videoMetaData.Duration {
 		return "", fmt.Errorf("Invalid start time ⚠️")
 	}
 
@@ -305,4 +287,59 @@ func buildArgs(url, opusFile, start_time, duration string) []string {
 	}
 
 	return args
+}
+
+func (hb *HypeBot) getQueue(guildID, channelID string) []string {
+	return hb.guildCacheStore[guildID].VCS[channelID]
+}
+
+func (hb *HypeBot) playNextTrack(vc *discordgo.VoiceConnection, guildID, channelID string) error {
+	trackPath := hb.getQueue(guildID, channelID)[0]
+
+	file, err := os.Open(trackPath)
+	if err != nil {
+		return fmt.Errorf("failed to open track %s: %w", trackPath, err)
+	}
+	defer file.Close()
+
+	if err := vc.Speaking(true); err != nil {
+		return fmt.Errorf("failed to set speaking state: %w", err)
+	}
+	defer vc.Speaking(false)
+
+	return hb.streamAudio(vc, dca.NewDecoder(file))
+}
+
+func (hb *HypeBot) streamAudio(vc *discordgo.VoiceConnection, decoder *dca.Decoder) error {
+	for {
+		frame, err := decoder.OpusFrame()
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return fmt.Errorf("decode error: %w", err)
+		}
+
+		select {
+		case vc.OpusSend <- frame:
+		case <-time.After(SEND_TIMEOUT):
+			return nil // Timed out, stop streaming
+		}
+	}
+}
+
+func (hb *HypeBot) advanceQueue(guildID, channelID string) bool {
+	queue := hb.getQueue(guildID, channelID)
+
+	if len(queue) > 1 {
+		hb.guildCacheStore[guildID].VCS[channelID] = queue[1:]
+		return true
+	}
+
+	// Last track finished
+	time.Sleep(POST_PLAYBACK_DELAY)
+	hb.guildCacheStore[guildID].VCS[channelID] = nil
+	hb.guildCacheStore[guildID].Playing = false
+
+	return false
 }

@@ -1,6 +1,7 @@
 package hypebot
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -34,10 +35,11 @@ func (hb *HypeBot) listenVoiceStateUpdate(s *discordgo.Session, e *discordgo.Voi
 		if filePath, ok := hb.userStore.GetThemesong(e.GuildID, e.VoiceState.UserID); ok {
 			var vc *discordgo.VoiceConnection
 			var err error
+			ctx := context.Background()
 
 			hb.guildCacheStore[e.GuildID].VCS[e.ChannelID] = append(hb.guildCacheStore[e.GuildID].VCS[e.ChannelID], filePath)
 			if !hb.guildCacheStore[e.GuildID].Playing {
-				vc, err = hb.s.ChannelVoiceJoin(e.VoiceState.GuildID, e.ChannelID, false, false)
+				vc, err = hb.s.ChannelVoiceJoin(ctx, e.VoiceState.GuildID, e.ChannelID, false, false)
 				vc.LogLevel = discordgo.LogInformational
 				if err != nil {
 					log.Println(err)
@@ -52,7 +54,7 @@ func (hb *HypeBot) listenVoiceStateUpdate(s *discordgo.Session, e *discordgo.Voi
 			err = hb.playThemesong(e, vc)
 			if err != nil {
 				log.Println(err)
-				vc.Disconnect()
+				vc.Disconnect(ctx)
 			}
 		}
 	}
