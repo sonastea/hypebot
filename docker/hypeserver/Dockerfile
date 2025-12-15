@@ -1,10 +1,10 @@
 # syntax=docker/dockerfile:1
 
-FROM golang:1.24-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
 ENV PATH="${PATH}:/app/"
 
-RUN apk add --no-cache build-base=0.5-r3 bash=5.2.37-r0
+RUN apk add --no-cache build-base=0.5-r3 bash=5.3.3-r1
 
 WORKDIR /app
 
@@ -16,7 +16,7 @@ COPY . .
 
 RUN go build ./cmd/hypeserver/
 
-FROM alpine:3.21.3
+FROM alpine:3.23.0
 
 ENV PATH="${PATH}:/app/"
 
