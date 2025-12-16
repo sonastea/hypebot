@@ -12,7 +12,7 @@ RUN apk add --no-cache build-base=0.5-r3 bash=5.3.3-r1 unzip=6.0-r16
 
 WORKDIR /app
 
-ADD https://github.com/yt-dlp/yt-dlp/releases/download/2025.10.14/yt-dlp /app/yt-dlp
+ADD https://github.com/yt-dlp/yt-dlp/releases/download/2025.12.08/yt-dlp /app/yt-dlp
 ADD https://github.com/denoland/deno/releases/latest/download/deno-x86_64-unknown-linux-gnu.zip /tmp/deno.zip
 
 RUN unzip /tmp/deno.zip -d /app
