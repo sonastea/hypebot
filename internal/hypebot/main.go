@@ -144,8 +144,10 @@ func (hb *HypeBot) cmdCheckMiddleware(name string) Middleware {
 func (hb *HypeBot) disableCommands() {
 	disabledCommands := make(map[string]bool, len(commands))
 	if DisableCommands != "" {
-		for _, cmd := range strings.Split(DisableCommands, ",") {
-			disabledCommands[strings.TrimSpace(cmd)] = true
+		for cmd := range strings.SplitSeq(DisableCommands, ",") {
+			if cmd = strings.TrimSpace(cmd); cmd != "" {
+				disabledCommands[cmd] = true
+			}
 		}
 	}
 
