@@ -222,7 +222,7 @@ func (hb *HypeBot) Run() chan os.Signal {
 	log.Printf("%v #%v is now running. Press CTRL-C to exit.\n", hb.s.State.User.Username, hb.s.State.User.Discriminator)
 
 	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	return stop
 }
 
