@@ -43,38 +43,30 @@ var (
 	}
 
 	registeredCommands = make([]*discordgo.ApplicationCommand, len(commands))
-	msg                string
 )
 
 func (hb *HypeBot) clearCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	msg := ""
 	exists := hb.userStore.Find(i.GuildID, i.Member.User.ID)
 
 	if !exists {
 		msg = "You have not set a themesong with HypeBot."
-		_, err := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
-			Content: &msg,
-		})
-		if err != nil {
-			s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-				Content: "Something went wrong",
-			})
-			return
-		}
 	} else {
 		msg = hb.removeThemesong(i.GuildID, i.Member.User.ID)
-		_, err := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
-			Content: &msg,
+	}
+
+	_, err := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
+		Content: &msg,
+	})
+	if err != nil {
+		s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+			Content: "Something went wrong",
 		})
-		if err != nil {
-			s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-				Content: "Something went wrong",
-			})
-			return
-		}
 	}
 }
 
 func (hb *HypeBot) setCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	msg := ""
 	opts := i.ApplicationCommandData().Options
 
 	url, start, duration, err := sanitizeSetCommand(opts)

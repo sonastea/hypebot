@@ -29,6 +29,7 @@ var (
 )
 
 type HypeBot struct {
+	downloadSem      chan struct{} // Limits concurrent downloads to prevent resource exhaustion
 	disabledCommands map[string]bool
 
 	s  *discordgo.Session
@@ -92,6 +93,7 @@ func NewHypeBot(db *sql.DB) (hb *HypeBot, err error) {
 	}
 
 	return &HypeBot{
+		downloadSem:      make(chan struct{}, 10), // Max 10 concurrent downloads
 		disabledCommands: make(map[string]bool, len(commands)),
 		s:                dg,
 		db:               db,
