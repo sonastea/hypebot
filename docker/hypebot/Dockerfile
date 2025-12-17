@@ -43,4 +43,4 @@ RUN mkdir -p /app/songs/
 
 WORKDIR /app
 
-CMD ["sh", "-c", "./hypebot --t=$TOKEN --discmds=$DISABLED_COMMANDS"]
+CMD ["sh", "-c", "./hypebot --t=$TOKEN"]

@@ -6,10 +6,8 @@ services:
     build:
       context: .
       args:
-        TOKEN: ${TOKEN}
         POToken: ${POToken}
         PROXY_URL: ${PROXY_URL}
-        DISABLED_COMMANDS: ${DISABLED_COMMANDS}
       dockerfile: ./docker/hypebot/Dockerfile
     logging:
       driver: journald
@@ -22,6 +20,7 @@ services:
       - POToken
       - PROXY_URL
       - DISABLED_COMMANDS
+      - CUSTOM_STATUS
     volumes:
       - "./songs:/app/songs"
       - "./hypebase.db:/app/hypebase.db"

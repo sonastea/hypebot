@@ -48,6 +48,7 @@ type (
 func setupEnv() {
 	POToken = os.Getenv("POToken")
 	ProxyURL = os.Getenv("PROXY_URL")
+	DisableCommands = os.Getenv("DISABLED_COMMANDS")
 
 	// cookies.txt is always required
 	if _, err := os.Stat("cookies.txt"); os.IsNotExist(err) {
@@ -59,7 +60,6 @@ func init() {
 	flag.StringVar(&Token, "t", "", "Bot Token")
 	flag.StringVar(&BotID, "bid", "994803132259381291", "User ID of bot")
 	flag.StringVar(&GuildID, "g", "", "Guild in which bot is running")
-	flag.StringVar(&DisableCommands, "discmds", "", "Comma-separated list of commands to disable")
 	flag.BoolVar(&DisablePOToken, "disable_potoken", true, "Proof of origin token")
 	flag.BoolVar(&RemoveCommands, "rmcmd", true, "Remove all commands after shutdowning or not")
 }
