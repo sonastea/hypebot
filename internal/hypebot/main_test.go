@@ -84,6 +84,18 @@ func TestSetupEnv(t *testing.T) {
 	assert.Equalf(t, expectedProxyURL, ProxyURL, "ProxyURl should be http://PROXYURLVALUE, got %v", ProxyURL)
 }
 
+func TestDisablePOTokenFlag(t *testing.T) {
+	t.Run("DisablePOToken defaults to true", func(t *testing.T) {
+		DisablePOToken = true
+		assert.True(t, DisablePOToken, "DisablePOToken should default to true")
+	})
+
+	t.Run("DisablePOToken can be set to false", func(t *testing.T) {
+		DisablePOToken = false
+		assert.False(t, DisablePOToken, "DisablePOToken should be false when set")
+	})
+}
+
 func TestInitGuildStore(t *testing.T) {
 	mhb.InitGuildStore()
 	assert.Exactly(t, 1, len(mhb.guildCacheStore), "guild store should have 1 guild")

@@ -188,14 +188,11 @@ func (hb *HypeBot) downloadVideo(url, start_time, duration string) (file_path st
 	return filePath, nil
 }
 
-func (hb *HypeBot) validateUrl(url string) (valid bool, err error) {
+func (hb *HypeBot) validateUrl(url string) (bool, error) {
 	ytdl, err := exec.LookPath("yt-dlp")
 	if err != nil {
-		if strings.Contains(err.Error(), "$PATH") {
-			log.Printf("{yt-dlp}-not_found: in $PATH")
-			return false, fmt.Errorf("There was an error processing your command :warning:")
-		}
-		return false, err
+		log.Printf("{yt-dlp}-not_found: %v", err)
+		return false, fmt.Errorf("There was an error processing your command :warning:")
 	}
 
 	args := []string{
@@ -204,22 +201,20 @@ func (hb *HypeBot) validateUrl(url string) (valid bool, err error) {
 		"--ignore-errors",
 		"--no-playlist",
 		"--no-check-formats",
-		"--match-filter",
-		"!is_live & duration < 600",
+		"--match-filter", "!is_live & duration < 600",
 		"--simulate",
 	}
 
 	if len(strings.TrimSpace(ProxyURL)) > 0 {
-		args = append(args,
-			"--proxy", ProxyURL,
-		)
+		args = append(args, "--proxy", ProxyURL)
 	}
 
-	if len(strings.TrimSpace(POToken)) > 0 {
-		extractorArgs := fmt.Sprintf("youtube:player-client=web;po_token=web+%s", POToken)
+	args = append(args, "--cookies", "cookies.txt")
+
+	// Add POToken if enabled
+	if !DisablePOToken && len(strings.TrimSpace(POToken)) > 0 {
 		args = append(args,
-			"--extractor-args", extractorArgs,
-			"--cookies", "cookies.txt",
+			"--extractor-args", fmt.Sprintf("youtube:player-client=web;po_token=web+%s", POToken),
 		)
 	}
 
@@ -227,30 +222,35 @@ func (hb *HypeBot) validateUrl(url string) (valid bool, err error) {
 	cmd := exec.Command(ytdl, args...)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
+
 	if err = cmd.Run(); err != nil && err.Error() != "exit status 101" {
-		dlerr := string(bytes.Split(stderr.Bytes(), []byte(":"))[2])
-		log.Printf("{yt-dlp}-not_live: %v -%v \n", err, dlerr)
-		return false, fmt.Errorf(dlerr, ":warning:")
+		dlerr := parseYtdlpError(stderr.String())
+		log.Printf("{yt-dlp}-validation_error: %v - %v\n", err, dlerr)
+		return false, fmt.Errorf("%s :warning:", dlerr)
 	}
 
-	if bytes.Contains(stdout.Bytes(), []byte("!is_live")) {
+	output := stdout.String()
+	if strings.Contains(output, "!is_live") {
 		return false, fmt.Errorf("Unable to process a live video :warning:")
 	}
-
-	cmd = exec.Command(ytdl, args...)
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	if err = cmd.Run(); err != nil && err.Error() != "exit status 101" {
-		dlerr := string(bytes.Split(stderr.Bytes(), []byte(":"))[2])
-		log.Printf("{yt-dlp}-not_live: %v -%v \n", err, dlerr)
-		return false, fmt.Errorf("%v :warning:", dlerr)
-	}
-
-	if bytes.Contains(stdout.Bytes(), []byte("duration < 600")) {
+	if strings.Contains(output, "duration < 600") {
 		return false, fmt.Errorf("Video must not exceed 10 minutes :warning:")
 	}
 
 	return true, nil
+}
+
+func parseYtdlpError(stderr string) string {
+	for line := range strings.SplitSeq(stderr, "\n") {
+		if strings.HasPrefix(line, "ERROR:") {
+			parts := strings.SplitN(line, ": ", 3)
+			if len(parts) >= 3 {
+				return parts[2]
+			}
+			return strings.TrimPrefix(line, "ERROR: ")
+		}
+	}
+	return "Unable to process video"
 }
 
 func buildArgs(url, opusFile, start_time, duration string) []string {
@@ -273,16 +273,15 @@ func buildArgs(url, opusFile, start_time, duration string) []string {
 	}
 
 	if len(strings.TrimSpace(ProxyURL)) > 0 {
-		args = append(args,
-			"--proxy", ProxyURL,
-		)
+		args = append(args, "--proxy", ProxyURL)
 	}
 
-	if len(strings.TrimSpace(POToken)) > 0 {
-		extractorArgs := fmt.Sprintf("youtube:player-client=web;po_token=web+%s", POToken)
+	args = append(args, "--cookies", "cookies.txt")
+
+	// Add POToken if enabled
+	if !DisablePOToken && len(strings.TrimSpace(POToken)) > 0 {
 		args = append(args,
-			"--extractor-args", extractorArgs,
-			"--cookies", "cookies.txt",
+			"--extractor-args", fmt.Sprintf("youtube:player-client=web;po_token=web+%s", POToken),
 		)
 	}
 
