@@ -2,7 +2,6 @@ package hypebot
 
 import (
 	"database/sql"
-	"flag"
 	"log"
 	"os"
 	"testing"
@@ -116,16 +115,14 @@ func TestIsCommandDisabled(t *testing.T) {
 }
 
 func TestDisableCommands(t *testing.T) {
-	os.Args = []string{"./hypebot", "--discmds=clear,set"}
-	flag.Parse()
+	t.Setenv("DISABLED_COMMANDS", "set")
+	DisableCommands = os.Getenv("DISABLED_COMMANDS")
 
-	hb := &HypeBot{disabledCommands: make(map[string]bool, 2)}
+	hb := &HypeBot{disabledCommands: make(map[string]bool, 1)}
 	hb.disableCommands()
 
-	expected := map[string]bool{"clear": true, "set": true}
-	assert.Exactly(t, expected, hb.disabledCommands, "disabled commands should only have 'set'")
-
-	DisableCommands = ""
+	expected := map[string]bool{"set": true}
+	assert.Exactly(t, expected, hb.disabledCommands, "disabled commands should have 'set'")
 }
 
 func TestHandleCommands(t *testing.T) {
