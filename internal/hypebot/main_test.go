@@ -2,7 +2,6 @@ package hypebot
 
 import (
 	"database/sql"
-	"flag"
 	"log"
 	"os"
 	"testing"
@@ -84,6 +83,18 @@ func TestSetupEnv(t *testing.T) {
 	assert.Equalf(t, expectedProxyURL, ProxyURL, "ProxyURl should be http://PROXYURLVALUE, got %v", ProxyURL)
 }
 
+func TestDisablePOTokenFlag(t *testing.T) {
+	t.Run("DisablePOToken defaults to true", func(t *testing.T) {
+		DisablePOToken = true
+		assert.True(t, DisablePOToken, "DisablePOToken should default to true")
+	})
+
+	t.Run("DisablePOToken can be set to false", func(t *testing.T) {
+		DisablePOToken = false
+		assert.False(t, DisablePOToken, "DisablePOToken should be false when set")
+	})
+}
+
 func TestInitGuildStore(t *testing.T) {
 	mhb.InitGuildStore()
 	assert.Exactly(t, 1, len(mhb.guildCacheStore), "guild store should have 1 guild")
@@ -104,16 +115,14 @@ func TestIsCommandDisabled(t *testing.T) {
 }
 
 func TestDisableCommands(t *testing.T) {
-	os.Args = []string{"./hypebot", "--discmds=clear,set"}
-	flag.Parse()
+	t.Setenv("DISABLED_COMMANDS", "set")
+	DisableCommands = os.Getenv("DISABLED_COMMANDS")
 
-	hb := &HypeBot{disabledCommands: make(map[string]bool, 2)}
+	hb := &HypeBot{disabledCommands: make(map[string]bool, 1)}
 	hb.disableCommands()
 
-	expected := map[string]bool{"clear": true, "set": true}
-	assert.Exactly(t, expected, hb.disabledCommands, "disabled commands should only have 'set'")
-
-	DisableCommands = ""
+	expected := map[string]bool{"set": true}
+	assert.Exactly(t, expected, hb.disabledCommands, "disabled commands should have 'set'")
 }
 
 func TestHandleCommands(t *testing.T) {

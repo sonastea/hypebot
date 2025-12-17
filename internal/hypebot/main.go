@@ -21,6 +21,7 @@ var (
 	Token           string
 	POToken         string
 	ProxyURL        string
+	DisablePOToken  bool
 	BotID           string
 	GuildID         string
 	DisableCommands string
@@ -28,6 +29,7 @@ var (
 )
 
 type HypeBot struct {
+	downloadSem      chan struct{} // Limits concurrent downloads to prevent resource exhaustion
 	disabledCommands map[string]bool
 
 	s  *discordgo.Session
@@ -47,11 +49,11 @@ type (
 func setupEnv() {
 	POToken = os.Getenv("POToken")
 	ProxyURL = os.Getenv("PROXY_URL")
+	DisableCommands = os.Getenv("DISABLED_COMMANDS")
 
-	if len(strings.TrimSpace(POToken)) > 0 {
-		if _, err := os.Stat("cookies.txt"); os.IsNotExist(err) {
-			panic("cookies.txt is required when using POToken")
-		}
+	// cookies.txt is always required
+	if _, err := os.Stat("cookies.txt"); os.IsNotExist(err) {
+		panic("cookies.txt is required")
 	}
 }
 
@@ -59,7 +61,7 @@ func init() {
 	flag.StringVar(&Token, "t", "", "Bot Token")
 	flag.StringVar(&BotID, "bid", "994803132259381291", "User ID of bot")
 	flag.StringVar(&GuildID, "g", "", "Guild in which bot is running")
-	flag.StringVar(&DisableCommands, "discmds", "", "Comma-separated list of commands to disable")
+	flag.BoolVar(&DisablePOToken, "disable_potoken", true, "Proof of origin token")
 	flag.BoolVar(&RemoveCommands, "rmcmd", true, "Remove all commands after shutdowning or not")
 }
 
@@ -91,6 +93,7 @@ func NewHypeBot(db *sql.DB) (hb *HypeBot, err error) {
 	}
 
 	return &HypeBot{
+		downloadSem:      make(chan struct{}, 10), // Max 10 concurrent downloads
 		disabledCommands: make(map[string]bool, len(commands)),
 		s:                dg,
 		db:               db,
@@ -144,8 +147,10 @@ func (hb *HypeBot) cmdCheckMiddleware(name string) Middleware {
 func (hb *HypeBot) disableCommands() {
 	disabledCommands := make(map[string]bool, len(commands))
 	if DisableCommands != "" {
-		for _, cmd := range strings.Split(DisableCommands, ",") {
-			disabledCommands[strings.TrimSpace(cmd)] = true
+		for cmd := range strings.SplitSeq(DisableCommands, ",") {
+			if cmd = strings.TrimSpace(cmd); cmd != "" {
+				disabledCommands[cmd] = true
+			}
 		}
 	}
 
@@ -222,7 +227,7 @@ func (hb *HypeBot) Run() chan os.Signal {
 	log.Printf("%v #%v is now running. Press CTRL-C to exit.\n", hb.s.State.User.Username, hb.s.State.User.Discriminator)
 
 	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	return stop
 }
 

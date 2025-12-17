@@ -12,7 +12,6 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -37,8 +36,9 @@ type VideoMetaData struct {
 func (hb *HypeBot) setThemesong(file_path string, guild_id string, user_id string) string {
 	if filePath, ok := hb.userStore.GetThemesong(guild_id, user_id); ok {
 		// Delete old themesong
-		del := exec.Command("rm", filePath)
-		del.Run()
+		if err := os.Remove(filePath); err != nil {
+			log.Printf("failed to delete old themesong %s: %v", filePath, err)
+		}
 		return themesong.Update(hb.db, file_path, guild_id, user_id)
 	}
 
@@ -71,9 +71,10 @@ func (hb *HypeBot) playThemesong(e *discordgo.VoiceStateUpdate, vc *discordgo.Vo
 }
 
 func (hb *HypeBot) downloadVideo(url, start_time, duration string) (file_path string, err error) {
-	var mu sync.Mutex
-	mu.Lock()
-	defer mu.Unlock()
+	// Acquire semaphore slot (blocks if 10 downloads already in progress)
+	hb.downloadSem <- struct{}{}
+	defer func() { <-hb.downloadSem }()
+
 	var filePath string
 
 	valid, err := hb.validateUrl(url)
@@ -164,23 +165,23 @@ func (hb *HypeBot) downloadVideo(url, start_time, duration string) (file_path st
 
 	dcaFile, err := os.Create(songsDir + fileName + ".dca")
 	if err != nil {
-		log.Println(err)
+		log.Printf("failed to create dca file: %v", err)
+		return "", err
 	}
 
 	_, err = io.Copy(dcaFile, encodeSession)
+	dcaFile.Close() // Close before cleanup regardless of error
 	if err != nil {
 		log.Printf("unable to write to %s: %v", songsDir+fileName+".dca", err)
 		return "", err
 	}
 
-	del := exec.Command("rm", opusFile)
-	if del.Run() != nil {
-		log.Println(err)
+	if err := os.Remove(opusFile); err != nil {
+		log.Printf("failed to remove temp file %s: %v", opusFile, err)
 	}
 
-	del = exec.Command("rm", opusFileComp)
-	if del.Run() != nil {
-		log.Println(err)
+	if err := os.Remove(opusFileComp); err != nil {
+		log.Printf("failed to remove temp file %s: %v", opusFileComp, err)
 	}
 
 	log.Printf("Created theme song: %v • %v.dca \n", videoMetaData.Title, fileName)
@@ -188,14 +189,11 @@ func (hb *HypeBot) downloadVideo(url, start_time, duration string) (file_path st
 	return filePath, nil
 }
 
-func (hb *HypeBot) validateUrl(url string) (valid bool, err error) {
+func (hb *HypeBot) validateUrl(url string) (bool, error) {
 	ytdl, err := exec.LookPath("yt-dlp")
 	if err != nil {
-		if strings.Contains(err.Error(), "$PATH") {
-			log.Printf("{yt-dlp}-not_found: in $PATH")
-			return false, fmt.Errorf("There was an error processing your command :warning:")
-		}
-		return false, err
+		log.Printf("{yt-dlp}-not_found: %v", err)
+		return false, fmt.Errorf("There was an error processing your command :warning:")
 	}
 
 	args := []string{
@@ -204,53 +202,63 @@ func (hb *HypeBot) validateUrl(url string) (valid bool, err error) {
 		"--ignore-errors",
 		"--no-playlist",
 		"--no-check-formats",
-		"--match-filter",
-		"!is_live & duration < 600",
+		"--match-filter", "!is_live & duration < 600",
 		"--simulate",
 	}
 
-	if len(strings.TrimSpace(ProxyURL)) > 0 {
-		args = append(args,
-			"--proxy", ProxyURL,
-		)
-	}
-
-	if len(strings.TrimSpace(POToken)) > 0 {
-		extractorArgs := fmt.Sprintf("youtube:player-client=web;po_token=web+%s", POToken)
-		args = append(args,
-			"--extractor-args", extractorArgs,
-			"--cookies", "cookies.txt",
-		)
-	}
+	args = appendCommonYtdlpArgs(args)
 
 	var stdout, stderr bytes.Buffer
 	cmd := exec.Command(ytdl, args...)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
+
 	if err = cmd.Run(); err != nil && err.Error() != "exit status 101" {
-		dlerr := string(bytes.Split(stderr.Bytes(), []byte(":"))[2])
-		log.Printf("{yt-dlp}-not_live: %v -%v \n", err, dlerr)
-		return false, fmt.Errorf(dlerr, ":warning:")
+		dlerr := parseYtdlpError(stderr.String())
+		log.Printf("{yt-dlp}-validation_error: %v - %v\n", err, dlerr)
+		return false, fmt.Errorf("%s :warning:", dlerr)
 	}
 
-	if bytes.Contains(stdout.Bytes(), []byte("!is_live")) {
+	output := stdout.String()
+	if strings.Contains(output, "!is_live") {
 		return false, fmt.Errorf("Unable to process a live video :warning:")
 	}
-
-	cmd = exec.Command(ytdl, args...)
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	if err = cmd.Run(); err != nil && err.Error() != "exit status 101" {
-		dlerr := string(bytes.Split(stderr.Bytes(), []byte(":"))[2])
-		log.Printf("{yt-dlp}-not_live: %v -%v \n", err, dlerr)
-		return false, fmt.Errorf("%v :warning:", dlerr)
-	}
-
-	if bytes.Contains(stdout.Bytes(), []byte("duration < 600")) {
+	if strings.Contains(output, "duration < 600") {
 		return false, fmt.Errorf("Video must not exceed 10 minutes :warning:")
 	}
 
 	return true, nil
+}
+
+func parseYtdlpError(stderr string) string {
+	for line := range strings.SplitSeq(stderr, "\n") {
+		if strings.HasPrefix(line, "ERROR:") {
+			parts := strings.SplitN(line, ": ", 3)
+			if len(parts) >= 3 {
+				return parts[2]
+			}
+			return strings.TrimPrefix(line, "ERROR: ")
+		}
+	}
+	return "Unable to process video"
+}
+
+// appendCommonYtdlpArgs adds proxy, cookies, and POToken args used by both
+// buildArgs and validateUrl.
+func appendCommonYtdlpArgs(args []string) []string {
+	if len(strings.TrimSpace(ProxyURL)) > 0 {
+		args = append(args, "--proxy", ProxyURL)
+	}
+
+	args = append(args, "--cookies", "cookies.txt")
+
+	if !DisablePOToken && len(strings.TrimSpace(POToken)) > 0 {
+		args = append(args,
+			"--extractor-args", fmt.Sprintf("youtube:player-client=web;po_token=web+%s", POToken),
+		)
+	}
+
+	return args
 }
 
 func buildArgs(url, opusFile, start_time, duration string) []string {
@@ -272,21 +280,7 @@ func buildArgs(url, opusFile, start_time, duration string) []string {
 		"--downloader-args", fmt.Sprintf("ffmpeg:-ss %s -t %s -b:a 96k", start_time, duration),
 	}
 
-	if len(strings.TrimSpace(ProxyURL)) > 0 {
-		args = append(args,
-			"--proxy", ProxyURL,
-		)
-	}
-
-	if len(strings.TrimSpace(POToken)) > 0 {
-		extractorArgs := fmt.Sprintf("youtube:player-client=web;po_token=web+%s", POToken)
-		args = append(args,
-			"--extractor-args", extractorArgs,
-			"--cookies", "cookies.txt",
-		)
-	}
-
-	return args
+	return appendCommonYtdlpArgs(args)
 }
 
 func (hb *HypeBot) getQueue(guildID, channelID string) []string {
