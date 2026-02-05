@@ -31,7 +31,7 @@ jobs:
         run: go get ./...
 
       - name: Run go tests
-        run: go test "./internal/..." -count=1
+        run: go test "./internal/..." -count=1 -timeout=20s
 
   changes:
     runs-on: ubuntu-latest
