@@ -41,6 +41,34 @@ Run the image in a container
 6. Docker hypebot container should be running in the background.
    > Name your container with `docker run --env-file .env -d --name <container_name> hypebot`.
 
+## Running in development
+
+Run both apps locally using the published Docker images with bind-mounted data.
+
+Building the images locally
+
+1. From the root of the repository, build HypeBot with `docker build . -t sonastea/hypebot:latest -f ./docker/hypebot/Dockerfile`.
+2. Build HypeServer with `docker build . -t sonastea/hypeserver:latest -f ./docker/hypeserver/Dockerfile`.
+
+HypeBot:
+
+```bash
+docker run -d --name hypebot \
+              --mount type=bind,src="$(pwd)"/songs,target=/app/songs \
+              --mount type=bind,src="$(pwd)"/hypebase.db,target=/app/hypebase.db \
+              --mount type=bind,src="$(pwd)"/cookies.txt,target=/app/cookies.txt \
+              sonastea/hypebot:latest hypebot -t=$TOKEN
+```
+
+HypeServer:
+
+```bash
+docker run -d --name hypeserver \
+              -p 3000:3000 \
+              --mount type=bind,src="$(pwd)"/hypebase.db,target=/app/hypebase.db \
+              sonastea/hypeserver:latest
+```
+
 ## Contact Me
 
 Message me on Discord `nastea` if you have any questions. Feel free to report any bugs or create a pull request, and I'll try to respond as soon as I can.
