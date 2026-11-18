@@ -23,7 +23,8 @@ RUN go mod download
 COPY cmd ./cmd
 COPY internal ./internal
 
-RUN --mount=type=cache,target=/root/.cache/go-build \
+# Let parallel image builds reuse compilation of shared CGO dependencies.
+RUN --mount=type=cache,target=/root/.cache/go-build,sharing=locked \
     go build -mod=readonly ./cmd/hypebot/ && chmod +x /app/yt-dlp
 
 FROM alpine:3.23 AS runtime-deps
