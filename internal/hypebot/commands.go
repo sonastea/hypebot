@@ -55,50 +55,41 @@ func (hb *HypeBot) clearCommand(s *discordgo.Session, i *discordgo.InteractionCr
 		msg = hb.removeThemesong(i.GuildID, i.Member.User.ID)
 	}
 
+	editReply(s, i, msg)
+}
+
+// editReply replaces the deferred "Processing..." response with msg, falling
+// back to an ephemeral follow-up if the edit fails.
+func editReply(s *discordgo.Session, i *discordgo.InteractionCreate, msg string) {
 	_, err := s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
 		Content: &msg,
 	})
 	if err != nil {
+		log.Printf("failed to edit interaction response: %v", err)
 		s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
 			Content: "Something went wrong",
+			Flags:   discordgo.MessageFlagsEphemeral,
 		})
 	}
 }
 
 func (hb *HypeBot) setCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	msg := ""
 	opts := i.ApplicationCommandData().Options
 
 	url, start, duration, err := sanitizeSetCommand(opts)
 	log.Printf("%s:%s set %s • [%s, %s, %s] \n", i.Member.User.Username, i.Member.User.ID, i.GuildID, url, start, duration)
 	if err != nil {
-		msg = err.Error()
-		_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
-			Content: &msg,
-		})
+		editReply(s, i, err.Error())
 		return
 	}
 
 	filePath, err := hb.downloadVideo(url, start, duration)
 	if err != nil {
-		msg = err.Error()
-		_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
-			Content: &msg,
-		})
+		editReply(s, i, err.Error())
 		return
 	}
 
-	msg = hb.setThemesong(filePath, i.GuildID, i.Member.User.ID)
-
-	_, err = s.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{
-		Content: &msg,
-	})
-	if err != nil {
-		s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-			Content: "Something went wrong",
-		})
-		return
-	}
+	editReply(s, i, hb.setThemesong(filePath, i.GuildID, i.Member.User.ID))
 }
 
 func sanitizeSetCommand(args []*discordgo.ApplicationCommandInteractionDataOption) (string, string, string, error) {
