@@ -2,7 +2,7 @@ package utils
 
 import "encoding/json"
 
-func PrettyStruct(data interface{}) (string, error) {
+func PrettyStruct(data any) (string, error) {
 	s, err := json.MarshalIndent(data, "", "    ")
 	if err != nil {
 		return "", err
