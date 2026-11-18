@@ -78,7 +78,27 @@ images locally. This requires Go, Docker with Buildx, FFmpeg on `PATH`, and
 Run `make -j2 test-images` to check only the images. It pulls current base
 images, refreshes the Alpine package installs, and runs smoke checks without
 network access or credentials. The images are tagged `hypebot:ci-test` and
-`hypeserver:ci-test` and are never pushed by these targets.
+`hypeserver:ci-test` and are never pushed by these targets. Add
+`BUILDX_FLAGS=--platform=linux/amd64` to check the architecture that is deployed.
+
+## Releases
+
+Pull requests run only the Go suite. Each push to `master` also builds and
+smoke-tests both `linux/amd64` images. Once both pass, a release is created
+automatically from the [Conventional Commits](https://www.conventionalcommits.org/)
+since the last tag:
+
+| Commits since the last release | New version |
+|---|---|
+| `feat!:`, `fix!:` etc., or a `BREAKING CHANGE:` footer | major (`v4.0.0`) |
+| `feat:` | minor (`v3.5.0`) |
+| `fix:` or `perf:` | patch (`v3.4.2`) |
+| only `chore:`, `ci:`, `docs:`, `test:`, `refactor:` etc. | no release |
+
+The release reuses the images that were tested, tags them with the version and
+`latest`, creates the Git tag and GitHub release, then deploys. If a deploy
+fails, rerun the failed jobs; the version is kept. Don't create or move version
+tags by hand.
 
 ## Contact Me
 

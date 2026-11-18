@@ -16,6 +16,9 @@ run-server: build-server
 	./hypeserver
 
 .PHONY: test test-go test-images test-hypebot-image test-hypeserver-image
+# Extra buildx flags, e.g. BUILDX_FLAGS=--platform=linux/amd64.
+BUILDX_FLAGS ?=
+
 test: test-go test-images
 
 test-go:
@@ -26,14 +29,14 @@ test-images: test-hypebot-image test-hypeserver-image
 
 # Pull current base images and refresh apk layers even on a warm builder.
 test-hypebot-image:
-	docker buildx build --load --pull --no-cache-filter build-deps,runtime-deps -f docker/hypebot/Dockerfile -t hypebot:ci-test .
+	docker buildx build $(BUILDX_FLAGS) --load --pull --no-cache-filter build-deps,runtime-deps -f docker/hypebot/Dockerfile -t hypebot:ci-test .
 	docker run --rm --network none --entrypoint /bin/sh hypebot:ci-test -ec '\
 		ldd ./hypebot; \
 		ffmpeg -v error -f lavfi -i sine=duration=0.1 -af loudnorm -c:a libopus -f opus - > /dev/null; \
 		python3 --version; deno --version; yt-dlp --version'
 
 test-hypeserver-image:
-	docker buildx build --load --pull --no-cache-filter build-deps -f docker/hypeserver/Dockerfile -t hypeserver:ci-test .
+	docker buildx build $(BUILDX_FLAGS) --load --pull --no-cache-filter build-deps -f docker/hypeserver/Dockerfile -t hypeserver:ci-test .
 	docker run --rm --network none --entrypoint /bin/sh hypeserver:ci-test -ec 'ldd ./hypeserver'
 
 clean:

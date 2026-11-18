@@ -7,10 +7,12 @@ name: ci/cd
 on:
   push:
     branches: ['master']
-    tags: ['v*.*.*']
   pull_request:
     types: [opened, synchronize, reopened]
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 env:
   TEST_TOKEN: ${{ secrets.TEST_TOKEN }}
@@ -40,41 +42,14 @@ jobs:
           sudo apt-get "${apt_sources[@]}" -o APT::Get::List-Cleanup=false update --error-on=any
           sudo apt-get "${apt_sources[@]}" install -y --no-install-recommends ffmpeg
 
-      - name: Run Go tests and validate Docker images
-        run: make -j3 test
+      - name: Run Go tests
+        run: make test-go
 
-  changes:
+  # Runs alongside the tests on master. Images are pushed only under their
+  # commit SHA; the release job promotes them once the tests have also passed.
+  images:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-24.04
-    outputs:
-      hypeserver: ${{ steps.filter.outputs.hypeserver }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Check paths that matter to hypeserver build
-        id: filter
-        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
-        with:
-          filters: |
-            hypeserver:
-              - 'internal/hypeserver/**'
-              - 'internal/datastore/**'
-
-  build-and-push-hypebot:
-    needs: tests
-    if: >
-      (
-        github.run_attempt > 1 && needs.tests.result == 'success'
-      ) || (
-        github.event_name == 'push' &&
-        github.ref_type == 'tag' &&
-        startsWith(github.ref, 'refs/tags/v') &&
-        needs.tests.result == 'success'
-      )
-    runs-on: ubuntu-24.04
-    env:
-      CUSTOM_STATUS: ${{ secrets.CUSTOM_STATUS }}
-      POToken: ${{ secrets.POToken }}
     permissions:
       contents: read
       packages: write
@@ -90,54 +65,82 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
-        with:
-          images: ghcr.io/sonastea/hypebot
+      - name: Build and smoke-test linux/amd64 images
+        run: >-
+          make -j2 test-images BUILDX_FLAGS='--platform=linux/amd64
+          --label=org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          --label=org.opencontainers.image.revision=${{ github.sha }}'
 
-      - name: Build and push hypebot docker image
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
-        with:
-          context: .
-          file: ./docker/hypebot/Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+      - name: Push tested images by commit
+        run: |
+          for app in hypebot hypeserver; do
+            image="ghcr.io/sonastea/$app:sha-$GITHUB_SHA"
+            docker tag "$app:ci-test" "$image"
+            docker push "$image"
+          done
 
-  build-and-push-hypeserver:
-    needs: [tests, changes]
-    if: ${{ needs.changes.outputs.hypeserver == 'true' }}
+  release:
+    needs: [tests, images]
     runs-on: ubuntu-24.04
+    # Serialize releases so two pushes can't claim the same version.
+    concurrency:
+      group: release
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      packages: write
+    outputs:
+      deploy: ${{ steps.version.outputs.release == 'true' && steps.version.outputs.latest == 'true' }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Determine version
+        id: version
+        run: .github/scripts/release-version.sh | tee -a "$GITHUB_OUTPUT"
 
       - name: Login to GitHub Container Registry
+        if: steps.version.outputs.release == 'true'
         uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata (tags, labels) for Docker
-        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
-        id: meta
-        with:
-          images: ghcr.io/sonastea/hypeserver
+      - name: Promote tested images
+        if: steps.version.outputs.release == 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          LATEST: ${{ steps.version.outputs.latest }}
+        run: |
+          for app in hypebot hypeserver; do
+            image="ghcr.io/sonastea/$app"
+            # Never repoint a published version; a rerun only finishes the release.
+            if ! docker buildx imagetools inspect "$image:$VERSION" > /dev/null 2>&1; then
+              docker buildx imagetools create --tag "$image:$VERSION" "$image:sha-$GITHUB_SHA"
+            fi
+            if [[ $LATEST == true ]]; then
+              docker buildx imagetools create --tag "$image:latest" "$image:$VERSION"
+            fi
+          done
 
-      - name: Build and push hypeserver docker image
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
-        with:
-          context: .
-          file: ./docker/hypeserver/Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+      - name: Create tag and GitHub release
+        if: steps.version.outputs.release == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+          LATEST: ${{ steps.version.outputs.latest }}
+        run: |
+          if ! gh release view "$VERSION" > /dev/null 2>&1; then
+            gh release create "$VERSION" --target "$GITHUB_SHA" --generate-notes --latest="$LATEST"
+          fi
 
   deploy-hypebot:
-    needs: build-and-push-hypebot
+    needs: release
+    if: needs.release.outputs.deploy == 'true'
     runs-on: ubuntu-24.04
     steps:
       - name: Deploy and run docker container
@@ -167,7 +170,8 @@ jobs:
             docker compose up -d --no-deps --force-recreate --pull always hypebot
 
   deploy-hypeserver:
-    needs: build-and-push-hypeserver
+    needs: release
+    if: needs.release.outputs.deploy == 'true'
     runs-on: ubuntu-24.04
     steps:
       - name: Deploy and run docker container
