@@ -1,237 +1,153 @@
 package hypebot
 
 import (
-	"database/sql"
-	"log"
+	"flag"
+	"fmt"
 	"os"
+	"os/signal"
 	"testing"
 
 	"github.com/bwmarrin/discordgo"
-	_ "github.com/mattn/go-sqlite3"
-	"github.com/sonastea/hypebot/internal/database"
 	"github.com/sonastea/hypebot/internal/datastore/guild"
-	"github.com/sonastea/hypebot/internal/datastore/user"
 	"github.com/sonastea/hypebot/internal/testutils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-var (
-	hb        *HypeBot
-	db        *sql.DB
-	mhb       *MockedHypeBot
-	mockStore *testutils.MockStore
-
-	testBotToken = os.Getenv("TEST_TOKEN")
-)
-
-type MockedHypeBot struct {
-	db     *sql.DB
-	guilds []*discordgo.Guild
-
-	guildCacheStore guild.CacheStore
-
-	guildStore *guild.Store
-	userStore  *user.Store
+func withTestCookies(t *testing.T) {
+	t.Helper()
+	t.Chdir(t.TempDir())
+	require.NoError(t, os.WriteFile("cookies.txt", nil, 0o600))
 }
 
-func TestMain(m *testing.M) {
-	db, _ = sql.Open("sqlite3", ":memory:")
-
-	_, err := db.Exec(database.Schema)
-	if err != nil {
-		log.Println(err)
-	}
-
-	mockStore = testutils.NewMockStore(db)
-
-	mhb = &MockedHypeBot{
-		db: db,
-		guilds: []*discordgo.Guild{
-			{
-				ID: "mock",
-			},
-		},
-		guildCacheStore: make(map[string]*guild.Guild),
-		guildStore:      guild.NewGuildStore(mockStore),
-		userStore:       user.NewUserStore(mockStore),
-	}
-
-	os.Exit(m.Run())
-}
-
-func (mhb *MockedHypeBot) InitGuildStore() {
-	for _, g := range mhb.guilds {
-		mhb.guildStore.Add(g.ID)
-		mhb.guildCacheStore[g.ID] = mhb.guildStore.Get(g.ID)
-	}
+func restoreEnvConfig(t *testing.T) {
+	t.Helper()
+	token, proxy, disabled := POToken, ProxyURL, DisableCommands
+	t.Cleanup(func() { POToken, ProxyURL, DisableCommands = token, proxy, disabled })
 }
 
 func TestSetupEnv(t *testing.T) {
-	tempFile, err := os.Create("cookies.txt")
-	if err != nil {
-		t.Fatalf("Failed to create temporary cookies.txt file: %v", err)
-	}
-	defer os.Remove(tempFile.Name())
-
-	expectedPOToken := "POTokenValue"
-	expectedProxyURL := "http://PROXYURLVALUE"
-	t.Setenv("POToken", expectedPOToken)
-	t.Setenv("PROXY_URL", expectedProxyURL)
+	withTestCookies(t)
+	restoreEnvConfig(t)
+	t.Setenv("POToken", "test-token")
+	t.Setenv("PROXY_URL", "http://proxy.example")
+	t.Setenv("DISABLED_COMMANDS", " set, , clear ")
 	setupEnv()
 
-	assert.Equalf(t, expectedPOToken, POToken, "POToken should be POTokenValue, got %v", POToken)
-	assert.Equalf(t, expectedProxyURL, ProxyURL, "ProxyURl should be http://PROXYURLVALUE, got %v", ProxyURL)
+	assert.Equal(t, "test-token", POToken)
+	assert.Equal(t, "http://proxy.example", ProxyURL)
+
+	hb := &HypeBot{}
+	hb.disableCommands()
+	assert.True(t, hb.isCommandDisabled("set"))
+	assert.True(t, hb.isCommandDisabled("clear"))
+	assert.False(t, hb.isCommandDisabled(""))
+	assert.False(t, hb.isCommandDisabled("other"))
+}
+
+func TestApplyMiddlewaresRunsInOrder(t *testing.T) {
+	var calls []string
+	record := func(name string) Middleware {
+		return func(s *discordgo.Session, i *discordgo.InteractionCreate, next InteractionCreateHandler) {
+			calls = append(calls, name+":before")
+			next(s, i)
+			calls = append(calls, name+":after")
+		}
+	}
+	stop := func(s *discordgo.Session, i *discordgo.InteractionCreate, next InteractionCreateHandler) {
+		calls = append(calls, "stop")
+	}
+	handler := func(s *discordgo.Session, i *discordgo.InteractionCreate) { calls = append(calls, "handler") }
+
+	applyMiddlewares(handler, []Middleware{record("outer"), record("inner")})(nil, nil)
+	assert.Equal(t, []string{"outer:before", "inner:before", "handler", "inner:after", "outer:after"}, calls)
+
+	calls = nil
+	applyMiddlewares(handler, []Middleware{record("outer"), stop, record("inner")})(nil, nil)
+	assert.Equal(t, []string{"outer:before", "stop", "outer:after"}, calls, "a middleware can short-circuit the chain")
+
+	calls = nil
+	applyMiddlewares(handler, nil)(nil, nil)
+	assert.Equal(t, []string{"handler"}, calls)
 }
 
 func TestDisablePOTokenFlag(t *testing.T) {
-	t.Run("DisablePOToken defaults to true", func(t *testing.T) {
-		DisablePOToken = true
-		assert.True(t, DisablePOToken, "DisablePOToken should default to true")
-	})
+	f := flag.Lookup("disable_potoken")
+	require.NotNil(t, f)
+	assert.Equal(t, "true", f.DefValue)
 
-	t.Run("DisablePOToken can be set to false", func(t *testing.T) {
-		DisablePOToken = false
-		assert.False(t, DisablePOToken, "DisablePOToken should be false when set")
-	})
+	previous := f.Value.String()
+	t.Cleanup(func() { require.NoError(t, f.Value.Set(previous)) })
+	require.NoError(t, f.Value.Set("true"))
+	assert.True(t, DisablePOToken)
+	require.NoError(t, f.Value.Set("false"))
+	assert.False(t, DisablePOToken, "the CLI flag should enable use of the token when false")
 }
 
 func TestInitGuildStore(t *testing.T) {
-	mhb.InitGuildStore()
-	assert.Exactly(t, 1, len(mhb.guildCacheStore), "guild store should have 1 guild")
-
-	for i, g := range mhb.guildCacheStore {
-		assert.Exactly(t, g.UID, mhb.guildCacheStore[i].UID, "guild %v from guild store does not match %v", mhb.guildCacheStore[i].UID, g.UID)
+	state := discordgo.NewState()
+	for _, id := range []string{"guild-a", "guild-b"} {
+		require.NoError(t, state.GuildAdd(&discordgo.Guild{ID: id}))
 	}
-}
-
-func TestIsCommandDisabled(t *testing.T) {
-	cmdName := "test-name"
 	hb := &HypeBot{
-		disabledCommands: map[string]bool{cmdName: true},
+		s:          &discordgo.Session{State: state},
+		guilds:     newGuilds(),
+		guildStore: guild.NewGuildStore(testutils.NewStore(t)),
 	}
 
-	cmd := hb.isCommandDisabled(cmdName)
-	assert.Exactly(t, true, cmd, "cmd should be true, but cmd is %v", cmd)
-}
+	// The gateway keeps updating state while startup reads it.
+	started, stop, gatewayDone := make(chan struct{}), make(chan struct{}), make(chan struct{})
+	go func() {
+		defer close(gatewayDone)
+		close(started)
+		for i := 0; ; i++ {
+			select {
+			case <-stop:
+				return
+			default:
+				state.GuildAdd(&discordgo.Guild{ID: fmt.Sprintf("guild-late-%d", i)})
+			}
+		}
+	}()
+	<-started
+	hb.initGuildStore()
+	close(stop)
+	<-gatewayDone
 
-func TestDisableCommands(t *testing.T) {
-	t.Setenv("DISABLED_COMMANDS", "set")
-	DisableCommands = os.Getenv("DISABLED_COMMANDS")
-
-	hb := &HypeBot{disabledCommands: make(map[string]bool, 1)}
-	hb.disableCommands()
-
-	expected := map[string]bool{"set": true}
-	assert.Exactly(t, expected, hb.disabledCommands, "disabled commands should have 'set'")
-}
-
-func TestHandleCommands(t *testing.T) {
-	dg, err := discordgo.New("Bot " + testBotToken)
-	if err != nil {
-		t.Fatalf("unable to create a discord session: %s", err)
+	for _, id := range []string{"guild-a", "guild-b"} {
+		assert.True(t, hb.guilds.has(id), "startup should register guild %s", id)
+		persisted := hb.guildStore.Get(id)
+		require.NotNil(t, persisted)
+		assert.Equal(t, id, persisted.UID, "startup should persist guild %s", id)
 	}
-
-	hb = &HypeBot{
-		s:               dg,
-		db:              db,
-		guildCacheStore: guild.NewGuildCacheStore(),
-		guildStore:      guild.NewGuildStore(mockStore),
-		userStore:       user.NewUserStore(mockStore),
-	}
-
-	err = hb.s.Open()
-	if err != nil {
-		t.Fatalf("unable opening discord websocket connection: %s", err)
-	}
-
-	hb.handleCommands()
-	expectedCommands := len(registeredCommands)
-	if cmds, err := hb.s.ApplicationCommands("1083967553887555595", ""); err == nil {
-		assert.Equalf(t, expectedCommands, len(cmds), "application commands should have %s registered commands: got %s want %s", expectedCommands, len(cmds), expectedCommands)
-	} else {
-		t.Fatalf("unable to retrieve discord commands: %s", err)
-	}
-
-	err = hb.s.Close()
-	if err != nil {
-		t.Fatalf("unable closing discord websocket connection: %s", err)
-	}
-}
-
-// func TestSetCustomStatus(t *testing.T) {
-// 	dg, err := discordgo.New("Bot " + testBotToken)
-// 	if err != nil {
-// 		t.Fatalf("unable to create a discord session: %s", err)
-// 	}
-//
-// 	hb = &HypeBot{
-// 		s:               dg,
-// 		db:              db,
-// 		guildCacheStore: guild.NewGuildCacheStore(),
-// 		guildStore:      guild.NewGuildStore(mockStore),
-// 		userStore:       user.NewUserStore(mockStore),
-// 	}
-//
-// 	err = hb.s.Open()
-// 	if err != nil {
-// 		t.Fatalf("unable opening discord websocket connection: %s", err)
-// 	}
-//
-// 	expectedCustomStatus := "custom status"
-// 	os.Setenv("CUSTOM_STATUS", expectedCustomStatus)
-//
-// 	hb.setCustomStatus()
-// 	assert.Equal(t, expectedCustomStatus, hb.s.Identify.Presence.Status, "custom status should be %s, but is %s", expectedCustomStatus, hb.s.Identify.Presence.Status)
-//
-// 	err = hb.s.Close()
-// 	if err != nil {
-// 		t.Fatalf("unable closing discord websocket connection: %s", err)
-// 	}
-// }
-
-func TestNewHypeBot(t *testing.T) {
-	if !assert.NotEmpty(t, testBotToken) {
-		t.Fatal("env(testBotToken), TEST_TOKEN not set")
-	}
-
-	if !assert.NotNil(t, db) {
-		t.Fatal("unable to open an SQLITE memory database")
-	}
-
-	dg, err := discordgo.New("Bot " + testBotToken)
-	if err != nil {
-		t.Fatalf("unable to create a discord session: %s", err)
-	}
-
-	hb = &HypeBot{
-		s:               dg,
-		db:              db,
-		guildCacheStore: guild.NewGuildCacheStore(),
-		guildStore:      guild.NewGuildStore(mockStore),
-		userStore:       user.NewUserStore(mockStore),
-	}
-
-	assert.IsType(t, &HypeBot{}, hb)
 }
 
 func TestRunAndStop(t *testing.T) {
-	dg, err := discordgo.New("Bot " + testBotToken)
-	if err != nil {
-		t.Fatalf("unable to create a discord session: %s", err)
+	withTestCookies(t)
+	restoreEnvConfig(t)
+	t.Setenv("DISABLED_COMMANDS", "")
+
+	token := Token
+	t.Cleanup(func() { Token = token })
+	Token = os.Getenv("TEST_TOKEN")
+	require.NotEmpty(t, Token, "TEST_TOKEN is required for the Discord integration test")
+
+	db := testutils.NewStore(t).DB()
+	hb, err := NewHypeBot(db)
+	require.NoError(t, err)
+	botChan := hb.Run()
+	require.NotNil(t, botChan, "HypeBot should connect and provide a shutdown signal channel")
+	t.Cleanup(func() {
+		signal.Stop(botChan)
+		assert.NoError(t, hb.Stop())
+		assert.Error(t, db.Ping(), "shutdown should close the bot's database")
+	})
+
+	registered, err := hb.s.ApplicationCommands(hb.s.State.User.ID, GuildID)
+	require.NoError(t, err)
+	names := make([]string, 0, len(registered))
+	for _, cmd := range registered {
+		names = append(names, cmd.Name)
 	}
-
-	testHb := &HypeBot{
-		s:                dg,
-		db:               db,
-		guildCacheStore:  guild.NewGuildCacheStore(),
-		guildStore:       guild.NewGuildStore(mockStore),
-		userStore:        user.NewUserStore(mockStore),
-		disabledCommands: make(map[string]bool),
-	}
-
-	botChan := testHb.Run()
-	assert.NotNil(t, botChan, "unable to return os.Signal from running hypebot")
-
-	err = testHb.Stop()
-	assert.Nil(t, err, "unable to shut down hypebot gracefully: %v", err)
+	assert.ElementsMatch(t, []string{"clear", "set"}, names)
 }

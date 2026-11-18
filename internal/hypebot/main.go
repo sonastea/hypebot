@@ -2,11 +2,14 @@ package hypebot
 
 import (
 	"database/sql"
+	"errors"
 	"flag"
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
 	"os/signal"
+	"slices"
 	"strings"
 	"syscall"
 
@@ -35,7 +38,7 @@ type HypeBot struct {
 	s  *discordgo.Session
 	db *sql.DB
 
-	guildCacheStore guild.CacheStore
+	guilds *guilds // guilds the bot is in, with each guild's playback
 
 	guildStore *guild.Store
 	userStore  *user.Store
@@ -52,7 +55,7 @@ func setupEnv() {
 	DisableCommands = os.Getenv("DISABLED_COMMANDS")
 
 	// cookies.txt is always required
-	if _, err := os.Stat("cookies.txt"); os.IsNotExist(err) {
+	if _, err := os.Stat("cookies.txt"); errors.Is(err, fs.ErrNotExist) {
 		panic("cookies.txt is required")
 	}
 }
@@ -66,8 +69,7 @@ func init() {
 }
 
 func applyMiddlewares(handler InteractionCreateHandler, middlewares []Middleware) InteractionCreateHandler {
-	for i := len(middlewares) - 1; i >= 0; i-- {
-		mw := middlewares[i]
+	for _, mw := range slices.Backward(middlewares) {
 		next := handler
 		handler = InteractionCreateHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			mw(s, i, next)
@@ -97,7 +99,7 @@ func NewHypeBot(db *sql.DB) (hb *HypeBot, err error) {
 		disabledCommands: make(map[string]bool, len(commands)),
 		s:                dg,
 		db:               db,
-		guildCacheStore:  guild.NewGuildCacheStore(),
+		guilds:           newGuilds(),
 		guildStore:       guild.NewGuildStore(store),
 		userStore:        user.NewUserStore(store),
 	}, nil
@@ -121,6 +123,7 @@ func (hb *HypeBot) respondCmdDisabled(s *discordgo.Session, i *discordgo.Interac
 	if err != nil {
 		s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
 			Content: "Something went wrong ❌",
+			Flags:   discordgo.MessageFlagsEphemeral,
 		})
 	}
 
@@ -191,9 +194,18 @@ func (hb *HypeBot) handleCommands() {
 }
 
 func (hb *HypeBot) initGuildStore() {
+	// The gateway updates State concurrently; copy the IDs under its lock and
+	// do the database work after releasing it.
+	hb.s.State.RLock()
+	ids := make([]string, 0, len(hb.s.State.Guilds))
 	for _, g := range hb.s.State.Guilds {
-		hb.guildStore.Add(g.ID)
-		hb.guildCacheStore[g.ID] = hb.guildStore.Get(g.ID)
+		ids = append(ids, g.ID)
+	}
+	hb.s.State.RUnlock()
+
+	for _, id := range ids {
+		hb.guildStore.Add(id)
+		hb.guilds.add(id)
 	}
 }
 
@@ -205,16 +217,18 @@ func (hb *HypeBot) setCustomStatus() {
 }
 
 func (hb *HypeBot) Run() chan os.Signal {
+	// Configure the session before Open starts its gateway goroutines, which
+	// read these fields concurrently. Intents are also reused on reconnect.
+	hb.s.StateEnabled = true
+	hb.s.LogLevel = discordgo.LogInformational
+	hb.s.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsGuilds | discordgo.IntentsGuildVoiceStates)
+
 	// Create websocket connection to discord with the discord session
 	err := hb.s.Open()
 	if err != nil {
 		log.Println("Error opening connection:", err)
 		return nil
 	}
-	hb.s.StateEnabled = true
-	hb.s.LogLevel = discordgo.LogInformational
-
-	hb.s.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsGuilds)
 
 	hb.initGuildStore()
 	hb.handleCommands()
@@ -232,15 +246,11 @@ func (hb *HypeBot) Run() chan os.Signal {
 }
 
 func (hb *HypeBot) Stop() error {
-	var err error
-
-	err = hb.s.Close()
-	if err != nil {
+	if err := hb.s.Close(); err != nil {
 		return err
 	}
 
-	err = hb.db.Close()
-	if err != nil {
+	if err := hb.db.Close(); err != nil {
 		return err
 	}
 

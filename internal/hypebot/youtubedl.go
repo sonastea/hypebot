@@ -49,25 +49,57 @@ func (hb *HypeBot) removeThemesong(guild_id string, user_id string) string {
 	return themesong.Remove(hb.db, guild_id, user_id)
 }
 
-func (hb *HypeBot) playThemesong(e *discordgo.VoiceStateUpdate, vc *discordgo.VoiceConnection) (err error) {
-	guildID := e.VoiceState.GuildID
-	channelID := e.ChannelID
-	ctx := context.Background()
-
-	for len(hb.getQueue(guildID, channelID)) > 0 {
-		if err := hb.playNextTrack(vc, guildID, channelID); err != nil {
-			return err
+// runPlayer joins channelID and plays pb's queue until it drains, then leaves.
+// The caller must have claimed pb with startPlayback. The guild stays claimed
+// until the bot has left the channel, so a new join can never start a second
+// connection mid-teardown; songs queued while leaving are played after
+// rejoining.
+func (hb *HypeBot) runPlayer(pb *playback, guildID, channelID string) {
+	for {
+		// The connection inherits the session's log level; writing it here
+		// would race with the voice goroutines started by the join.
+		ctx, cancel := context.WithTimeout(context.Background(), voiceTimeout)
+		vc, err := hb.s.ChannelVoiceJoin(ctx, guildID, channelID, false, false)
+		cancel()
+		if err != nil {
+			log.Printf("failed to join voice channel %s: %v", channelID, err)
+			if vc != nil {
+				leaveVoice(vc)
+			}
+			// Free the guild so the next join can try again.
+			pb.reset()
+			return
 		}
 
-		if !hb.advanceQueue(guildID, channelID) {
-			vc.Disconnect(ctx)
-			break
+		hb.playQueue(pb, vc)
+		leaveVoice(vc)
+		if !pb.finish() {
+			return
 		}
-
-		time.Sleep(POST_PLAYBACK_DELAY)
 	}
+}
 
-	return nil
+// playQueue plays pb's queue on vc until it drains. A track that fails to
+// play is skipped so it does not cost the songs queued behind it.
+func (hb *HypeBot) playQueue(pb *playback, vc *discordgo.VoiceConnection) {
+	for {
+		track, ok := pb.current()
+		if !ok {
+			return
+		}
+
+		if err := hb.playTrack(vc, track); err != nil {
+			log.Printf("skipping track %s: %v", track, err)
+		} else {
+			// Let the audio finish before the next track or leaving. Songs
+			// queued meanwhile are still played.
+			time.Sleep(POST_PLAYBACK_DELAY)
+		}
+
+		if !pb.advance() {
+			return
+		}
+	}
 }
 
 func (hb *HypeBot) downloadVideo(url, start_time, duration string) (file_path string, err error) {
@@ -112,7 +144,7 @@ func (hb *HypeBot) downloadVideo(url, start_time, duration string) (file_path st
 	args := buildArgs(url, fileName+".opus", start_time, duration)
 	cmd := exec.Command(ytdl, args...)
 	data, err := cmd.Output()
-	if err != nil && err.Error() != "exit status 101" {
+	if err != nil && !isYtdlpMaxDownloads(err) {
 		log.Printf("{yt-dlp}-unhandled: %v (%v, %v, %v) \n", err, url, start_time, duration)
 		return "", fmt.Errorf("There was an error processing your request ⚠️")
 	}
@@ -202,7 +234,7 @@ func (hb *HypeBot) validateUrl(url string) (bool, error) {
 		"--ignore-errors",
 		"--no-playlist",
 		"--no-check-formats",
-		"--match-filter", "!is_live & duration < 600",
+		"--print", "%(is_live)s|%(duration)s",
 		"--simulate",
 	}
 
@@ -213,21 +245,50 @@ func (hb *HypeBot) validateUrl(url string) (bool, error) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	if err = cmd.Run(); err != nil && err.Error() != "exit status 101" {
+	if err = cmd.Run(); err != nil && !isYtdlpMaxDownloads(err) {
 		dlerr := parseYtdlpError(stderr.String())
 		log.Printf("{yt-dlp}-validation_error: %v - %v\n", err, dlerr)
 		return false, fmt.Errorf("%s :warning:", dlerr)
 	}
 
-	output := stdout.String()
-	if strings.Contains(output, "!is_live") {
-		return false, fmt.Errorf("Unable to process a live video :warning:")
-	}
-	if strings.Contains(output, "duration < 600") {
-		return false, fmt.Errorf("Video must not exceed 10 minutes :warning:")
+	if err := checkVideoLimits(stdout.String()); err != nil {
+		return false, err
 	}
 
 	return true, nil
+}
+
+// maxVideoSeconds is the longest video a themesong can be clipped from.
+const maxVideoSeconds = 600
+
+// checkVideoLimits rejects live videos and videos of maxVideoSeconds or more,
+// given yt-dlp's "%(is_live)s|%(duration)s" output. yt-dlp prints NA for
+// missing fields.
+func checkVideoLimits(output string) error {
+	line, _, _ := strings.Cut(strings.TrimSpace(output), "\n")
+	isLive, duration, _ := strings.Cut(strings.TrimSpace(line), "|")
+
+	if isLive == "True" {
+		return fmt.Errorf("Unable to process a live video :warning:")
+	}
+
+	seconds, err := strconv.ParseFloat(duration, 64)
+	if err != nil {
+		log.Printf("{yt-dlp}-unknown_duration: %q", output)
+		return fmt.Errorf("Unable to determine the video's length :warning:")
+	}
+	if seconds >= maxVideoSeconds {
+		return fmt.Errorf("Video must not exceed 10 minutes :warning:")
+	}
+
+	return nil
+}
+
+// isYtdlpMaxDownloads reports whether yt-dlp exited with code 101, which it
+// uses when --max-downloads stops it after a successful download.
+func isYtdlpMaxDownloads(err error) bool {
+	var exitErr *exec.ExitError
+	return errors.As(err, &exitErr) && exitErr.ExitCode() == 101
 }
 
 func parseYtdlpError(stderr string) string {
@@ -275,7 +336,7 @@ func buildArgs(url, opusFile, start_time, duration string) []string {
 		"--no-check-formats",
 		"--print-json",
 		"--quiet",
-		"--output", fmt.Sprintf("%s", opusFile),
+		"--output", opusFile,
 		"--downloader", "ffmpeg",
 		"--downloader-args", fmt.Sprintf("ffmpeg:-ss %s -t %s -b:a 96k", start_time, duration),
 	}
@@ -283,13 +344,7 @@ func buildArgs(url, opusFile, start_time, duration string) []string {
 	return appendCommonYtdlpArgs(args)
 }
 
-func (hb *HypeBot) getQueue(guildID, channelID string) []string {
-	return hb.guildCacheStore[guildID].VCS[channelID]
-}
-
-func (hb *HypeBot) playNextTrack(vc *discordgo.VoiceConnection, guildID, channelID string) error {
-	trackPath := hb.getQueue(guildID, channelID)[0]
-
+func (hb *HypeBot) playTrack(vc *discordgo.VoiceConnection, trackPath string) error {
 	file, err := os.Open(trackPath)
 	if err != nil {
 		return fmt.Errorf("failed to open track %s: %w", trackPath, err)
@@ -314,26 +369,43 @@ func (hb *HypeBot) streamAudio(vc *discordgo.VoiceConnection, decoder *dca.Decod
 			return fmt.Errorf("decode error: %w", err)
 		}
 
-		select {
-		case vc.OpusSend <- frame:
-		case <-time.After(SEND_TIMEOUT):
+		sent, err := sendFrame(vc, frame)
+		if err != nil {
+			return err
+		}
+		if !sent {
 			return nil // Timed out, stop streaming
 		}
 	}
 }
 
-func (hb *HypeBot) advanceQueue(guildID, channelID string) bool {
-	queue := hb.getQueue(guildID, channelID)
+var errVoiceClosed = errors.New("voice connection closed")
 
-	if len(queue) > 1 {
-		hb.guildCacheStore[guildID].VCS[channelID] = queue[1:]
-		return true
+// sendFrame sends one opus frame, reporting false if it timed out.
+//
+// discordgo closes OpusSend shortly after a connection dies (for example when
+// the bot is disconnected from the channel), and a send on a closed channel
+// panics. Checking Dead first avoids that in practice; the recover covers the
+// remaining window, since the channel is closed by discordgo's goroutine.
+func sendFrame(vc *discordgo.VoiceConnection, frame []byte) (sent bool, err error) {
+	select {
+	case <-vc.DeadChannel():
+		return false, errVoiceClosed
+	default:
 	}
 
-	// Last track finished
-	time.Sleep(POST_PLAYBACK_DELAY)
-	hb.guildCacheStore[guildID].VCS[channelID] = nil
-	hb.guildCacheStore[guildID].Playing = false
+	defer func() {
+		if recover() != nil {
+			sent, err = false, errVoiceClosed
+		}
+	}()
 
-	return false
+	select {
+	case vc.OpusSend <- frame:
+		return true, nil
+	case <-vc.DeadChannel():
+		return false, errVoiceClosed
+	case <-time.After(SEND_TIMEOUT):
+		return false, nil
+	}
 }

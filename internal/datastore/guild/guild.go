@@ -9,8 +9,6 @@ import (
 type Guild struct {
 	id        int
 	UID       string `json:"uid"`
-	VCS       map[string][]string
-	Playing   bool
 	Active    int8   `json:"active"`
 	CreatedAt string `json:"createdAt,omitempty"`
 	UpdatedAt string `json:"updatedAt,omitempty"`
@@ -24,17 +22,11 @@ type GuildStore interface {
 	GetTotalServed() (uint64, bool)
 }
 
-type CacheStore map[string]*Guild
-
 type Store struct {
 	datastore.BaseStore
 }
 
 var _ GuildStore = &Store{}
-
-func NewGuildCacheStore() CacheStore {
-	return make(map[string]*Guild)
-}
 
 func NewGuildStore(store datastore.BaseStore) *Store {
 	return &Store{BaseStore: store}
@@ -98,9 +90,7 @@ func (gs *Store) Get(guild_id string) *Guild {
 	}
 	defer res.Close()
 
-	guild := &Guild{
-		VCS: make(map[string][]string),
-	}
+	guild := &Guild{}
 
 	for res.Next() {
 		err = res.Scan(&guild.UID, &guild.Active, &guild.CreatedAt, &guild.UpdatedAt)
