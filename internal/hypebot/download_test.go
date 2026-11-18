@@ -163,7 +163,10 @@ func TestDownloadVideoFailures(t *testing.T) {
 
 func TestDownloadVideoCreatesPlayableSong(t *testing.T) {
 	if _, err := exec.LookPath("ffmpeg"); err != nil {
-		t.Skip("ffmpeg is required to encode songs; CI installs it")
+		if os.Getenv("GITHUB_ACTIONS") == "true" {
+			t.Fatalf("ffmpeg is required to encode songs in CI: %v", err)
+		}
+		t.Skip("ffmpeg is required to encode songs")
 	}
 	useFakeYtdlp(t)
 	t.Setenv("FAKE_YTDLP_AUDIO", "1")

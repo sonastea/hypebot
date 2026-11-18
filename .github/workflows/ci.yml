@@ -1,6 +1,7 @@
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Non-PR runs need unique groups: a shared group also replaces pending runs.
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 name: ci/cd
 on:
@@ -8,7 +9,7 @@ on:
     branches: ['master']
     tags: ['v*.*.*']
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
 
 env:
@@ -28,13 +29,19 @@ jobs:
           go-version: '1.27.x'
 
       - name: Install ffmpeg
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+        shell: bash
+        run: |
+          # Keep the runner's Ubuntu suites and signing key, but bypass cloud
+          # mirror stalls and unrelated third-party sources for this install.
+          sources="$RUNNER_TEMP/ffmpeg.sources"
+          sed -E 's#^URIs:.*#URIs: https://archive.ubuntu.com/ubuntu/#' \
+            /etc/apt/sources.list.d/ubuntu.sources > "$sources"
+          apt_sources=(-o "Dir::Etc::sourcelist=$sources" -o Dir::Etc::sourceparts=-)
+          sudo apt-get "${apt_sources[@]}" -o APT::Get::List-Cleanup=false update --error-on=any
+          sudo apt-get "${apt_sources[@]}" install -y --no-install-recommends ffmpeg
 
-      - name: Install dependencies
-        run: go get ./...
-
-      - name: Run go tests
-        run: go test "./internal/..." -count=1 -timeout=20s
+      - name: Run Go tests and validate Docker images
+        run: make -j3 test
 
   changes:
     runs-on: ubuntu-latest

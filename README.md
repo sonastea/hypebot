@@ -23,7 +23,7 @@ Building from source
 Building the image
 
 1. Go to root of the folder after cloning this repository.
-2. Build the image with `docker build -t hypebot .`
+2. Build the image with `docker build -f docker/hypebot/Dockerfile -t hypebot .`
 
 Run the image in a container
 
@@ -68,6 +68,17 @@ docker run -d --name hypeserver \
               --mount type=bind,src="$(pwd)"/hypebase.db,target=/app/hypebase.db \
               sonastea/hypeserver:latest
 ```
+
+## Running tests
+
+Run `make -j3 test` to run the full Go suite and build and smoke-test both Docker
+images locally. This requires Go, Docker with Buildx, FFmpeg on `PATH`, and
+`TEST_TOKEN` set for the live Discord integration test.
+
+Run `make -j2 test-images` to check only the images. It pulls current base
+images, refreshes the Alpine package installs, and runs smoke checks without
+network access or credentials. The images are tagged `hypebot:ci-test` and
+`hypeserver:ci-test` and are never pushed by these targets.
 
 ## Contact Me
 

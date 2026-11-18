@@ -1,10 +1,12 @@
 # syntax=docker/dockerfile:1
 
-FROM golang:1.27-alpine AS builder
+FROM golang:1.27-alpine3.23 AS build-deps
+
+RUN apk add --no-cache build-base bash
+
+FROM build-deps AS builder
 
 ENV PATH="${PATH}:/app/"
-
-RUN apk add --no-cache build-base=0.5-r4 bash=5.3.9-r1
 
 WORKDIR /app
 
@@ -12,11 +14,13 @@ COPY go.mod .
 COPY go.sum .
 RUN go mod download
 
-COPY . .
+COPY cmd ./cmd
+COPY internal ./internal
 
-RUN go build ./cmd/hypeserver/
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    go build -mod=readonly ./cmd/hypeserver/
 
-FROM alpine:3.23.5
+FROM alpine:3.23
 
 ENV PATH="${PATH}:/app/"
 

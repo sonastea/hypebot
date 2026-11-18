@@ -2,3 +2,6 @@
 .cache
 .gitignore
 .dockerignore
+.env
+.envrc
+cookies.txt
