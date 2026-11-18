@@ -2,7 +2,8 @@ package database
 
 import (
 	"database/sql"
-	"log"
+	"fmt"
+	"sync"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -36,22 +37,31 @@ const Schema string = `
     FOREIGN KEY ("User_ID") REFERENCES User(UID)
     );`
 
-var DB *sql.DB
+var (
+	DB *sql.DB
 
-func init() {
-	var err error
+	openOnce sync.Once
+	openErr  error
+)
 
-	DB, err = sql.Open("sqlite3", "file:hypebase.db?mode=rwc&journal_mode=WAL")
-	if err != nil {
-		log.Fatalln(err)
-	}
+// GetDBConn opens hypebase.db in the working directory on first use, creating
+// it and its schema if needed, and returns the shared connection.
+func GetDBConn() (*sql.DB, error) {
+	openOnce.Do(func() {
+		db, err := sql.Open("sqlite3", "file:hypebase.db?mode=rwc&journal_mode=WAL")
+		if err != nil {
+			openErr = err
+			return
+		}
 
-	// Setup schema
-	if _, err = DB.Exec(Schema); err != nil {
-		log.Fatalln(err)
-	}
-}
+		if _, err = db.Exec(Schema); err != nil {
+			db.Close()
+			openErr = fmt.Errorf("setting up schema: %w", err)
+			return
+		}
 
-func GetDBConn() (db *sql.DB, err error) {
-	return DB, nil
+		DB = db
+	})
+
+	return DB, openErr
 }
