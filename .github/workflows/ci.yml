@@ -116,14 +116,16 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
           LATEST: ${{ steps.version.outputs.latest }}
         run: |
+          # Copy the tested manifest as-is so every tag has the same digest.
+          promote() { docker buildx imagetools create --prefer-index=false --tag "$2" "$1"; }
           for app in hypebot hypeserver; do
             image="ghcr.io/sonastea/$app"
             # Never repoint a published version; a rerun only finishes the release.
             if ! docker buildx imagetools inspect "$image:$VERSION" > /dev/null 2>&1; then
-              docker buildx imagetools create --tag "$image:$VERSION" "$image:sha-$GITHUB_SHA"
+              promote "$image:sha-$GITHUB_SHA" "$image:$VERSION"
             fi
             if [[ $LATEST == true ]]; then
-              docker buildx imagetools create --tag "$image:latest" "$image:$VERSION"
+              promote "$image:$VERSION" "$image:latest"
             fi
           done
 
