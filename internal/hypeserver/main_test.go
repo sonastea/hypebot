@@ -1,87 +1,128 @@
 package hypeserver
 
 import (
-	"database/sql"
-	"log"
+	"context"
+	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
-	"os"
+	"os/signal"
+	"sync"
 	"testing"
+	"time"
 
-	"github.com/sonastea/hypebot/internal/database"
 	"github.com/sonastea/hypebot/internal/datastore/guild"
 	"github.com/sonastea/hypebot/internal/datastore/user"
 	"github.com/sonastea/hypebot/internal/testutils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
-
-var (
-	err error
-
-	db        *sql.DB
-	hs        *HypeServer
-	mockStore *testutils.MockStore
-)
-
-func TestMain(m *testing.M) {
-	db, _ = sql.Open("sqlite3", ":memory:")
-
-	mockStore = testutils.NewMockStore(db)
-
-	_, err := db.Exec(database.Schema)
-	if err != nil {
-		log.Println(err)
-	}
-
-	os.Exit(m.Run())
-}
-
-func TestNewHypeServer(t *testing.T) {
-	hs, err = NewHypeServer(guild.NewGuildStore(mockStore), user.NewUserStore(mockStore))
-	if err != nil {
-		t.Fatalf("unable to create hypeserver: %s", err)
-	}
-
-	assert.IsType(t, &HypeServer{}, hs)
-	assert.Equal(t, uint64(0), hs.servers)
-	assert.Equal(t, uint64(0), hs.users)
-}
 
 func TestRunAndStop(t *testing.T) {
-	ctx, srvChan := hs.Run()
-	assert.NotNil(t, srvChan, "unable to return os.Signal from running hypeserver")
+	store := testutils.NewStore(t)
+	hs, err := NewHypeServer(guild.NewGuildStore(store), user.NewUserStore(store))
+	require.NoError(t, err)
+	t.Cleanup(func() { assert.NoError(t, hs.server.Close()) })
 
-	err := hs.Stop(ctx, srvChan)
-	assert.Nil(t, err, "unable to shut down hypeserver gracefully: %v", err)
+	hs.server.Addr = "127.0.0.1:0"
+	listening := make(chan string, 1)
+	hs.server.BaseContext = func(listener net.Listener) context.Context {
+		listening <- listener.Addr().String()
+		return context.Background()
+	}
+
+	// A request that stays in flight until released, to observe graceful shutdown.
+	started, release := make(chan struct{}), make(chan struct{})
+	hs.server.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		close(started)
+		<-release
+		io.WriteString(w, "done")
+	})
+
+	srvChan := hs.Run()
+	require.NotNil(t, srvChan)
+	t.Cleanup(func() { signal.Stop(srvChan) })
+
+	var addr string
+	select {
+	case addr = <-listening:
+	case <-time.After(5 * time.Second):
+		t.Fatal("HypeServer did not start listening")
+	}
+
+	body := make(chan string, 1)
+	go func() {
+		res, err := http.Get("http://" + addr)
+		if !assert.NoError(t, err) {
+			body <- ""
+			return
+		}
+		defer res.Body.Close()
+		b, _ := io.ReadAll(res.Body)
+		body <- string(b)
+	}()
+	<-started
+
+	stopped := make(chan error, 1)
+	go func() { stopped <- hs.Stop(srvChan) }()
+	select {
+	case err := <-stopped:
+		t.Fatalf("Stop returned while a request was in flight: %v", err)
+	case <-time.After(200 * time.Millisecond):
+	}
+
+	close(release)
+	require.NoError(t, <-stopped, "Stop should wait for the in-flight request")
+	assert.Equal(t, "done", <-body, "the in-flight request completes")
+
+	conn, err := net.DialTimeout("tcp", addr, time.Second)
+	if conn != nil {
+		conn.Close()
+	}
+	require.Error(t, err, "server should no longer accept connections after Stop")
 }
 
 func TestStats(t *testing.T) {
-	req, err := http.NewRequest("GET", "/stats", nil)
-	if err != nil {
-		t.Fatalf("get request error for /stats: %v", err)
+	store := testutils.NewStore(t)
+	gs, us := guild.NewGuildStore(store), user.NewUserStore(store)
+	hs, err := NewHypeServer(gs, us)
+	require.NoError(t, err)
+
+	checkStats := func(origin, wantJSON string) {
+		t.Helper()
+		req := httptest.NewRequest(http.MethodGet, "/stats", nil)
+		if origin != "" {
+			req.Header.Set("Origin", origin)
+		}
+		rec := httptest.NewRecorder()
+		hs.server.Handler.ServeHTTP(rec, req)
+
+		res := rec.Result()
+		defer res.Body.Close()
+		require.Equal(t, http.StatusOK, res.StatusCode)
+		assert.Equal(t, "application/json", res.Header.Get("Content-Type"))
+		assert.Equal(t, origin, res.Header.Get("Access-Control-Allow-Origin"))
+		assert.JSONEq(t, wantJSON, rec.Body.String())
 	}
 
-	w := httptest.NewRecorder()
-	stats(guild.NewGuildStore(mockStore), user.NewUserStore(mockStore)).ServeHTTP(w, req)
+	checkStats("", `{"servers":"0","users":"0"}`)
 
-	assert.Exactlyf(t, w.Code, http.StatusOK, "stats handler returned wrong status code: got %v want %v", w.Code, http.StatusOK)
+	gs.Add("guild-a")
+	gs.Add("guild-b")
+	gs.Remove("guild-b")
+	us.Add(user.User{Guild_ID: "guild-a", UID: "user-a"})
+	us.Add(user.User{Guild_ID: "guild-a", UID: "user-b"})
+	us.Add(user.User{Guild_ID: "guild-b", UID: "user-c"})
+	checkStats("https://dashboard.example", `{"servers":"2","users":"3"}`)
 
-	expected := `{"servers":"0","users":"0"}
-`
-	assert.Exactlyf(t, expected, w.Body.String(), "/stats returned unexecpted body: got %v want %v", w.Body.String(), expected)
-}
-
-func TestEnableCors(t *testing.T) {
-	req, err := http.NewRequest("GET", "/", nil)
-	if err != nil {
-		t.Fatalf("get request error for /: %v", err)
+	// The server handles requests concurrently.
+	var wg sync.WaitGroup
+	for range 10 {
+		wg.Go(func() {
+			rec := httptest.NewRecorder()
+			hs.server.Handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/stats", nil))
+			assert.JSONEq(t, `{"servers":"2","users":"3"}`, rec.Body.String())
+		})
 	}
-
-	w := httptest.NewRecorder()
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		enableCors(&w, r)
-	})
-	handler.ServeHTTP(w, req)
-
-	assert.Exactlyf(t, "", w.Header().Get("Access-Control-Allow-Origin"), "enable cors return unexpected header: got %v want %v", w.Header().Get("Access-Control-Allow-Origin"), "")
+	wg.Wait()
 }

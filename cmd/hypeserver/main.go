@@ -29,12 +29,12 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	ctx, srvChan := hs.Run()
+	srvChan := hs.Run()
 
-	for range srvChan {
-		err = hs.Stop(ctx, srvChan)
-		if err != nil {
-			log.Fatalln(err)
-		}
+	// Stop closes the channel, so it must run exactly once even if more
+	// interrupts were buffered.
+	<-srvChan
+	if err := hs.Stop(srvChan); err != nil {
+		log.Fatalln(err)
 	}
 }
