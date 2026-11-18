@@ -42,6 +42,6 @@ require (
 	google.golang.org/protobuf v1.36.12 // indirect
 )
 
-replace github.com/bwmarrin/discordgo => github.com/yeongaori/discordgo-fork v0.0.0-20260903121233-c69c6b1a9166
+replace github.com/bwmarrin/discordgo => github.com/yeongaori/discordgo-fork v0.0.0-20260929102729-a10ba9c7ec13
 
 tool github.com/air-verse/air
