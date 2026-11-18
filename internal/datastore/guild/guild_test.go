@@ -1,103 +1,46 @@
 package guild
 
 import (
-	"database/sql"
-	"log"
-	"os"
 	"testing"
 
-	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/sonastea/hypebot/internal/datastore"
+	"github.com/sonastea/hypebot/internal/testutils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-var (
-	db         *sql.DB
-	err        error
-	guild      Guild
-	mock       sqlmock.Sqlmock
-	store      datastore.BaseStore
-	guildStore *Store
-)
+func TestGuildMembership(t *testing.T) {
+	gs := NewGuildStore(testutils.NewStore(t))
+	gs.Add("guild-a")
+	gs.Add("guild-a")
+	gs.Add("guild-b")
 
-func TestMain(m *testing.M) {
-	db, mock, err = sqlmock.New()
-	if err != nil {
-		log.Fatalf("error with creating sqlmock: %v", err)
-	}
-	defer db.Close()
+	g := gs.Get("guild-a")
+	require.NotNil(t, g)
+	assert.Equal(t, "guild-a", g.UID)
+	assert.Equal(t, int8(1), g.Active)
+	assert.NotEmpty(t, g.CreatedAt)
+	assert.NotEmpty(t, g.UpdatedAt)
 
-	store, _ = datastore.New(db)
-	guildStore = NewGuildStore(store)
-	guild = Guild{
-		UID:       "9",
-		Active:    1,
-		CreatedAt: "2009-09-09",
-		UpdatedAt: "2009-09-09",
-	}
+	gs.Remove("guild-a")
+	removed := gs.Get("guild-a")
+	require.NotNil(t, removed)
+	assert.Equal(t, "guild-a", removed.UID, "leaving keeps guild history")
+	assert.Equal(t, int8(0), removed.Active)
 
-	os.Exit(m.Run())
+	other := gs.Get("guild-b")
+	require.NotNil(t, other)
+	assert.Equal(t, "guild-b", other.UID)
+	assert.Equal(t, int8(1), other.Active, "leaving does not deactivate other guilds")
+
+	total, ok := gs.GetTotalServed()
+	require.True(t, ok)
+	assert.Equal(t, uint64(2), total, "repeat joins don't increase the count")
 }
 
-func TestAdd(t *testing.T) {
-	mock.ExpectPrepare(`INSERT OR IGNORE INTO Guild \(UID\) VALUES \(\?\);`).
-		ExpectExec().
-		WithArgs(guild.UID).
-		WillReturnResult(sqlmock.NewResult(1, 1))
+func TestGetReturnsNilWhenQueryFails(t *testing.T) {
+	store := testutils.NewStore(t)
+	_, err := store.DB().Exec("DROP TABLE Guild")
+	require.NoError(t, err)
 
-	guildStore.Add(guild.UID)
-
-	err := mock.ExpectationsWereMet()
-	assert.NoError(t, err)
-}
-
-func TestFind(t *testing.T) {
-	mock.ExpectPrepare(`SELECT UID FROM Guild WHERE Guild.UID = \?;`).
-		ExpectExec().
-		WithArgs(guild.UID).
-		WillReturnResult(sqlmock.NewResult(0, 1))
-
-	found, err := guildStore.Find(guild.UID)
-
-	assert.NoError(t, err)
-	assert.True(t, found)
-}
-
-func TestGet(t *testing.T) {
-	columns := []string{"UID", "Active", "CreatedAt", "UpdatedAt"}
-	mock.ExpectQuery(`SELECT UID, Active, CreatedAt, UpdatedAt from Guild Where Guild.UID = \?;`).
-		WithArgs(guild.UID).
-		WillReturnRows(sqlmock.NewRows(columns).AddRow(guild.UID, guild.Active, guild.CreatedAt, guild.UpdatedAt))
-
-	g := guildStore.Get(guild.UID)
-
-	assert.Equal(t, guild.UID, g.UID)
-	assert.Equal(t, guild.Active, g.Active)
-	assert.Equal(t, guild.CreatedAt, g.CreatedAt)
-	assert.Equal(t, guild.UpdatedAt, g.UpdatedAt)
-}
-
-func TestRemove(t *testing.T) {
-	mock.ExpectPrepare(`UPDATE Guild SET active = 0 WHERE Guild.UID = \?;`).
-		ExpectExec().
-		WithArgs(guild.UID).
-		WillReturnResult(sqlmock.NewResult(1, 1))
-
-	guildStore.Remove(guild.UID)
-
-	err := mock.ExpectationsWereMet()
-	assert.NoError(t, err)
-}
-
-func TestGetTotalServed(t *testing.T) {
-	expectedTotal := uint64(9)
-
-	columns := []string{"COUNT(*)"}
-	mock.ExpectQuery("SELECT COUNT\\(\\*\\) FROM Guild;").
-		WillReturnRows(sqlmock.NewRows(columns).AddRow(expectedTotal))
-
-	total, ok := guildStore.GetTotalServed()
-
-	assert.True(t, ok)
-	assert.Equal(t, expectedTotal, total)
+	assert.Nil(t, NewGuildStore(store).Get("guild-a"))
 }

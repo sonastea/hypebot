@@ -1,68 +1,42 @@
-package themesong
+package themesong_test
 
 import (
-	"database/sql"
-	"log"
-	"os"
 	"testing"
 
-	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/sonastea/hypebot/internal/datastore/themesong"
+	"github.com/sonastea/hypebot/internal/datastore/user"
+	"github.com/sonastea/hypebot/internal/testutils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-var (
-	db   *sql.DB
-	err  error
-	mock sqlmock.Sqlmock
-	song Themesong
-)
+func TestThemesongLifecycle(t *testing.T) {
+	store := testutils.NewStore(t)
+	db := store.DB()
+	us := user.NewUserStore(store)
 
-func TestMain(m *testing.M) {
-	db, mock, err = sqlmock.New()
-	if err != nil {
-		log.Fatalf("error with creating sqlmock: %v", err)
-	}
-	defer db.Close()
-
-	song = Themesong{
-		id:       9,
-		Guild_ID: "9",
-		User_ID:  "9",
-		Filepath: "/path/to/themesong",
+	checkSong := func(guild, user, want string) {
+		t.Helper()
+		path, found := us.GetThemesong(guild, user)
+		assert.Equal(t, want != "", found, "song exists for %s/%s", guild, user)
+		assert.Equal(t, want, path, "song path for %s/%s", guild, user)
 	}
 
-	os.Exit(m.Run())
-}
+	require.Equal(t, "Added themesong ✅", themesong.Set(db, "original.dca", "guild-a", "user-a"))
+	require.Equal(t, "Added themesong ✅", themesong.Set(db, "other-user.dca", "guild-a", "user-b"))
+	require.Equal(t, "Added themesong ✅", themesong.Set(db, "other-guild.dca", "guild-b", "user-a"))
+	checkSong("guild-a", "user-a", "original.dca")
 
-func TestSet(t *testing.T) {
-	mock.ExpectPrepare(`INSERT OR IGNORE INTO Themesong \(id, guild_id, user_id, Filepath\) VALUES \(\?, \?, \?, \?\);`).
-		ExpectExec().
-		WithArgs(nil, song.Guild_ID, song.User_ID, song.Filepath).
-		WillReturnResult(sqlmock.NewResult(9, 1))
+	require.Equal(t, "Updated themesong ✅", themesong.Update(db, "replacement.dca", "guild-a", "user-a"))
+	checkSong("guild-a", "user-a", "replacement.dca")
+	checkSong("guild-a", "user-b", "other-user.dca")
+	checkSong("guild-b", "user-a", "other-guild.dca")
 
-	err := Set(db, song.Filepath, song.Guild_ID, song.User_ID)
+	require.Equal(t, "Removed themesong ❌", themesong.Remove(db, "guild-a", "user-a"))
+	checkSong("guild-a", "user-a", "")
+	checkSong("guild-a", "user-b", "other-user.dca")
+	checkSong("guild-b", "user-a", "other-guild.dca")
 
-	assert.Contains(t, SONG_ADDED_SUCCESS, err, SONG_ADDED_FAIL)
-}
-
-func TestRemove(t *testing.T) {
-	mock.ExpectPrepare(`DELETE FROM Themesong WHERE guild_id = \? AND user_id = \?;`).
-		ExpectExec().
-		WithArgs(song.Guild_ID, song.User_ID).
-		WillReturnResult(sqlmock.NewResult(9, 1))
-
-	err := Remove(db, song.Guild_ID, song.User_ID)
-
-	assert.Contains(t, SONG_REMOVED_SUCCESS, err, SONG_REMOVED_FAIL)
-}
-
-func TestUpdate(t *testing.T) {
-	mock.ExpectPrepare(`UPDATE Themesong SET Filepath = \? WHERE guild_id = \? AND user_id = \?;`).
-		ExpectExec().
-		WithArgs(song.Filepath, song.Guild_ID, song.User_ID).
-		WillReturnResult(sqlmock.NewResult(9, 1))
-
-	err := Update(db, song.Filepath, song.Guild_ID, song.User_ID)
-
-	assert.Contains(t, SONG_UPDATED_SUCCESS, err, SONG_UPDATED_FAIL)
+	assert.Equal(t, "Error updating themesong ⚠️", themesong.Update(db, "missing.dca", "guild-a", "user-a"))
+	assert.Equal(t, "Error removing themesong ⚠️", themesong.Remove(db, "guild-a", "user-a"))
 }

@@ -1,45 +1,37 @@
 package datastore
 
 import (
-	"errors"
+	"database/sql"
 	"testing"
 
-	"github.com/DATA-DOG/go-sqlmock"
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNew_DBNil(t *testing.T) {
-	_, err := New(nil)
+	store, err := New(nil)
 
-	assert.NotNil(t, err, "Expected error passing a nil db")
-	assert.Exactly(t, err.Error(), ERROR_DB_NIL)
+	require.EqualError(t, err, "database is nil")
+	require.Nil(t, store)
 }
 
 func TestNew_DBConnectionFailure(t *testing.T) {
-	db, mock, err := sqlmock.New(sqlmock.MonitorPingsOption(true))
-	if err != nil {
-		t.Fatalf("failed to open a mock database: %v", err)
-	}
-	defer db.Close()
+	db, err := sql.Open("sqlite3", ":memory:")
+	require.NoError(t, err)
+	require.NoError(t, db.Close())
 
-	mock.ExpectPing().WillReturnError(errors.New(ERROR_CONNECTION_ERROR))
-
-	_, err = New(db)
-	if err == nil {
-		t.Error("Expected error passing a dead db connection")
-	}
-
-	assert.Exactly(t, err.Error(), ERROR_CONNECTION_ERROR)
+	store, err := New(db)
+	require.EqualError(t, err, "failed to ping database")
+	require.Nil(t, store)
 }
 
 func TestNew_Success(t *testing.T) {
-	db, _, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("failed to open a mock database: %v", err)
-	}
-	defer db.Close()
+	db, err := sql.Open("sqlite3", ":memory:")
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, db.Close()) })
 
 	store, err := New(db)
-	assert.IsType(t, &Store{}, store)
+	require.NoError(t, err)
+	require.NotNil(t, store)
+	require.Same(t, db, store.DB())
 }

@@ -92,11 +92,11 @@ func (gs *Store) Find(guild_id string) (bool, error) {
 
 func (gs *Store) Get(guild_id string) *Guild {
 	res, err := gs.DB().Query("SELECT UID, Active, CreatedAt, UpdatedAt from Guild Where Guild.UID = ?;", guild_id)
-	defer res.Close()
 	if err != nil {
 		log.Println(err)
 		return nil
 	}
+	defer res.Close()
 
 	guild := &Guild{
 		VCS: make(map[string][]string),

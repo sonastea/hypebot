@@ -1,6 +1,8 @@
 package user
 
 import (
+	"database/sql"
+	"errors"
 	"log"
 	"time"
 
@@ -33,13 +35,9 @@ func NewUserStore(store datastore.BaseStore) *Store {
 }
 
 func (us *Store) Find(guild_id string, user_id string) bool {
-	res := us.DB().QueryRow("SELECT UID from User WHERE guild_id = ? AND UID = ?;",
+	err := us.DB().QueryRow("SELECT UID from User WHERE guild_id = ? AND UID = ?;",
 		guild_id, user_id).Scan(&user_id)
-	if res != nil {
-		return false
-	}
-
-	return true
+	return err == nil
 }
 
 func (us *Store) Add(user User) {
@@ -66,24 +64,16 @@ func (us *Store) Add(user User) {
 }
 
 func (us *Store) GetThemesong(guild_id string, user_id string) (filePath string, ok bool) {
-	res, err := us.DB().Query("SELECT Filepath from Themesong Where Themesong.guild_id = ? AND Themesong.user_id = ?;",
-		guild_id, user_id)
+	err := us.DB().QueryRow("SELECT Filepath from Themesong Where Themesong.guild_id = ? AND Themesong.user_id = ?;",
+		guild_id, user_id).Scan(&filePath)
 	if err != nil {
-		log.Println(err)
-	}
-	defer res.Close()
-
-	var filepath string
-
-	for res.Next() {
-		err = res.Scan(&filepath)
-		if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
 			log.Println(err)
 		}
-		return filepath, true
+		return "", false
 	}
 
-	return "", false
+	return filePath, true
 }
 
 func (us *Store) GetTotalServed() (uint64, bool) {
